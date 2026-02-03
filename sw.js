@@ -22,10 +22,8 @@ self.addEventListener("fetch", (event) => {
     const cached = await caches.match(event.request, { ignoreSearch: true });
     if (cached) return cached;
     try {
-      const res = await fetch(event.request);
-      return res;
+      return await fetch(event.request);
     } catch {
-      // offline fallback
       return caches.match("./index.html");
     }
   })());
