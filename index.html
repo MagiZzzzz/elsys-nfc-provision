@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Provision Elsys NFC</title>
+  <meta name="theme-color" content="#111111">
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:22px;max-width:760px}
+    .card{border:1px solid #e6e6e6;border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 1px 10px rgba(0,0,0,.04)}
+    h1{font-size:22px;margin:0 0 6px}
+    .muted{opacity:.75}
+    button{font-size:18px;padding:14px 14px;border-radius:12px;border:0;cursor:pointer;width:100%}
+    button.primary{background:#111;color:#fff}
+    button.secondary{background:#f2f2f2}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    pre, textarea{
+      width:100%; box-sizing:border-box; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      border:1px solid #ddd; border-radius:12px; padding:10px; background:#fafafa;
+    }
+    textarea{min-height:140px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:700px){ .row{grid-template-columns:1fr} }
+    .ok{color:#0a7a20;font-weight:700}
+    .ko{color:#b00020;font-weight:700}
+    .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#f2f2f2;font-size:13px;margin-left:6px}
+    .small{font-size:13px}
+  </style>
+</head>
+
+<body>
+  <h1>Provision Elsys NFC <span class="pill">Android + Chrome</span></h1>
+  <div class="muted">Scan QR → bouton “ÉCRIRE” → tap la sonde (NFC) → redémarre la sonde → elle tente de JOIN.</div>
+
+  <div class="card">
+    <div class="small muted">
+      🔒 Astuce sécurité : on met la config dans le <b>#fragment</b> de l’URL (pas envoyé au serveur).  
+      Exemple : <code>#Ota:1|AppEui:...|AppKey:...</code>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 8px;font-size:18px;">Config à écrire (déduite du QR / URL)</h2>
+    <pre id="cfgPreview">(vide)</pre>
+
+    <div class="row" style="margin-top:10px;">
+      <button class="primary" id="writeBtn">ÉCRIRE DANS LA SONDE (NFC)</button>
+      <button class="secondary" id="readBtn">LIRE LA SONDE (NFC) pour vérifier</button>
+    </div>
+
+    <p id="status" class="small" style="margin:10px 0 0;"></p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 8px;font-size:18px;">Générateur de lien (pour faire tes QR)</h2>
+    <div class="muted small">Colle ta config <b>Key:Value</b> (une ligne par paramètre), puis copie le lien à mettre dans ton QR.</div>
+    <textarea id="editor" spellcheck="false" placeholder="Ota:1&#10;Ack:0&#10;AppEui:1122334455667788&#10;AppKey:001122...&#10;SplPer:60&#10;TempPer:1&#10;SendPer:10&#10;Port:5"></textarea>
+
+    <div class="row" style="margin-top:10px;">
+      <button class="secondary" id="makeLinkBtn">METTRE LA CONFIG DANS L’URL (#...)</button>
+      <button class="secondary" id="copyLinkBtn">COPIER LE LIEN</button>
+    </div>
+    <pre id="linkOut" style="margin-top:10px;"></pre>
+
+    <div class="small muted" style="margin-top:8px;">
+      📌 Rappel Elsys : <b>SendPer × SplPer</b> = intervalle d’envoi ; <b>TempPer × SplPer</b> = intervalle de mesure. :contentReference[oaicite:5]{index=5}
+    </div>
+  </div>
+
+<script>
+  // --- Helpers ---
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $("status");
+  const cfgPreview = $("cfgPreview");
+  const editor = $("editor");
+  const linkOut = $("linkOut");
+
+  function setStatus(html) { statusEl.innerHTML = html; }
+  function esc(s){ return s.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+
+  function parseCfgFromHash() {
+    const h = (location.hash || "").replace(/^#/, "");
+    if (!h) return "";
+    const decoded = decodeURIComponent(h);
+    // allow either '|' or '\n' in hash
+    const cfg = decoded.includes("|") ? decoded.split("|").join("\n") : decoded;
+    return cfg.trim();
+  }
+
+  function cfgToHash(cfgText) {
+    // normalize: remove empty lines, keep "Key:Value" lines
+    const lines = cfgText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    return encodeURIComponent(lines.join("|"));
+  }
+
+  function currentLinkWithHash(hashValue) {
+    const base = location.origin + location.pathname;
+    return base + "#" + hashValue;
+  }
+
+  function refreshUI() {
+    const cfg = parseCfgFromHash();
+    cfgPreview.textContent = cfg || "(aucune config dans l’URL)";
+    editor.value = cfg || editor.value;
+    linkOut.textContent = cfg ? currentLinkWithHash(cfgToHash(cfg)) : "";
+  }
+
+  // --- Web NFC checks ---
+  const hasWebNfc = ("NDEFWriter" in window) && ("NDEFReader" in window);
+
+  function requireWebNfcOrExplain() {
+    if (!hasWebNfc) {
+      setStatus('<span class="ko">Web NFC non supporté ici.</span> Utilise <b>Android + Chrome</b> et un site en HTTPS.');
+      return false;
+    }
+    return true;
+  }
+
+  async function writeCfgToNfc(cfg) {
+    const writer = new NDEFWriter();
+    // Write a single Text record containing the full Key:Value config
+    await writer.write({ records: [{ recordType: "text", data: cfg, lang: "en" }] });
+  }
+
+  async function readOnceFromNfc(timeoutMs=15000) {
+    const reader = new NDEFReader();
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), timeoutMs);
+
+    return new Promise(async (resolve, reject) => {
+      try {
+        reader.onreadingerror = () => reject(new Error("Lecture NFC impossible (essaie de re-taper la sonde)."));
+        reader.onreading = (event) => {
+          try {
+            const recs = event.message.records || [];
+            // Try to decode first text record
+            for (const r of recs) {
+              if (r.recordType === "text") {
+                const txt = new TextDecoder(r.encoding || "utf-8").decode(r.data);
+                clearTimeout(t);
+                ac.abort();
+                resolve(txt);
+                return;
+              }
+            }
+            clearTimeout(t);
+            ac.abort();
+            resolve("(Pas de record texte trouvé)");
+          } catch (e) {
+            clearTimeout(t);
+            ac.abort();
+            reject(e);
+          }
+        };
+
+        await reader.scan({ signal: ac.signal });
+      } catch (e) {
+        clearTimeout(t);
+        reject(e);
+      }
+    });
+  }
+
+  // --- Buttons ---
+  $("writeBtn").addEventListener("click", async () => {
+    setStatus("");
+    if (!requireWebNfcOrExplain()) return;
+
+    const cfg = parseCfgFromHash();
+    if (!cfg) {
+      setStatus('<span class="ko">Aucune config dans l’URL.</span> Colle une config dans le générateur puis clique “METTRE LA CONFIG DANS L’URL”.');
+      return;
+    }
+
+    try {
+      setStatus('Approche la sonde… (écriture NFC en cours)');
+      await writeCfgToNfc(cfg);
+      setStatus('<span class="ok">OK : config écrite.</span> Redémarre la sonde (pile/aimant selon modèle) pour déclencher le JOIN.');
+    } catch (e) {
+      setStatus('<span class="ko">Erreur écriture NFC :</span> ' + esc(e.message || String(e)));
+    }
+  });
+
+  $("readBtn").addEventListener("click", async () => {
+    setStatus("");
+    if (!requireWebNfcOrExplain()) return;
+
+    try {
+      setStatus('Approche la sonde… (lecture NFC)');
+      const txt = await readOnceFromNfc();
+      setStatus('<span class="ok">Lecture OK.</span> Contenu reçu affiché ci-dessous.');
+      cfgPreview.textContent = txt;
+    } catch (e) {
+      setStatus('<span class="ko">Erreur lecture NFC :</span> ' + esc(e.message || String(e)));
+    }
+  });
+
+  $("makeLinkBtn").addEventListener("click", () => {
+    const hash = cfgToHash(editor.value);
+    location.hash = hash;
+    refreshUI();
+    setStatus('<span class="ok">OK.</span> Ton URL est prête → copie-la et mets-la dans le QR.');
+  });
+
+  $("copyLinkBtn").addEventListener("click", async () => {
+    const cfg = editor.value.trim();
+    if (!cfg) return;
+    const url = currentLinkWithHash(cfgToHash(cfg));
+    try {
+      await navigator.clipboard.writeText(url);
+      setStatus('<span class="ok">Lien copié.</span>');
+    } catch {
+      setStatus('<span class="ko">Impossible de copier automatiquement.</span> Sélectionne le lien dans la zone ci-dessous.');
+    }
+    linkOut.textContent = url;
+  });
+
+  // Service worker (offline after first open)
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
+  }
+
+  // Init
+  refreshUI();
+
+  // Disable buttons if Web NFC missing
+  if (!hasWebNfc) {
+    $("writeBtn").disabled = true;
+    $("readBtn").disabled = true;
+    setStatus('<span class="ko">Web NFC non supporté ici.</span> Utilise <b>Android + Chrome</b>.');
+  }
+</script>
+</body>
+</html>
