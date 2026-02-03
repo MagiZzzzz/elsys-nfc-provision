@@ -3,12 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Elsys NFC - Harmony</title>
+  <title>Elsys NFC Provision</title>
   <style>
     body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:18px;max-width:720px}
     .card{border:1px solid #e6e6e6;border-radius:14px;padding:14px;margin:12px 0}
-    button{font-size:18px;padding:14px 14px;border-radius:12px;border:0;cursor:pointer;width:100%}
-    button.primary{background:#111;color:#fff}
+    button{font-size:18px;padding:14px;border-radius:12px;border:0;cursor:pointer;width:100%;background:#111;color:#fff}
     pre{white-space:pre-wrap;word-break:break-word;background:#fafafa;border:1px solid #ddd;border-radius:12px;padding:10px}
     .muted{opacity:.75}
     .ok{color:#0a7a20;font-weight:700}
@@ -19,28 +18,26 @@
 <body>
   <h2>Elsys NFC (Harmony ID)</h2>
   <div class="muted">
-    Ouvre dans <b>Chrome Android</b> (HTTPS).<br>
     URL attendue : <code>#h=1A2B</code> (optionnel : <code>&p=5&a=0</code>)
   </div>
 
   <div class="card">
-    <div><b>Configuration générée (ce qui sera écrit en NFC)</b></div>
+    <b>Configuration générée (écrite en NFC)</b>
     <pre id="cfg">(lecture...)</pre>
     <p id="status" class="muted"></p>
-    <button class="primary" id="writeBtn">ÉCRIRE DANS LA SONDE (NFC)</button>
+    <button id="writeBtn">ÉCRIRE DANS LA SONDE (NFC)</button>
   </div>
 
   <div class="card">
-    <div><b>Diagnostic</b></div>
-    <div class="muted" id="diag"></div>
+    <b>Diagnostic</b>
+    <pre id="diag" class="muted"></pre>
   </div>
 
 <script>
 /** ===== À ADAPTER ===== **/
-const APP_EUI_PREFIX = "EF1C1AEF1C1A";                 // AppEui/JoinEUI prefix (hex)
-const APP_KEY_PREFIX = "EF1C1AEF1C1AEF1C1AEF1C1AFFFF"; // AppKey prefix (hex)
+const APP_EUI_PREFIX = "EF1C1AEF1C1A";                  // hex
+const APP_KEY_PREFIX = "EF1C1AEF1C1AEF1C1AEF1C1AFFFF";  // hex
 
-/** ===== Helpers ===== **/
 const $ = (id) => document.getElementById(id);
 function esc(s){ return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
 function isHex(s){ return /^[0-9A-F]+$/i.test(s); }
@@ -54,19 +51,17 @@ function addLine(lines,k,v){
   if (!s) return;
   lines.push(`${k}:${s}`);
 }
-
-/** ===== Parse hash ===== **/
 function getParamsFromHash(){
   const raw = decodeURIComponent((location.hash||"").replace(/^#/,"")).trim();
-  return new URLSearchParams(raw); // accepte h=...&p=... etc.
+  return new URLSearchParams(raw);
 }
 
-function buildCfgFromHarmony(){
+function buildCfgFromHarmony() {
   const params = getParamsFromHash();
   const hid = (params.get("h") || "").toUpperCase().replace(/[^0-9A-F]/g,"");
   if (!hid) throw new Error("ID Harmony manquant. Exemple: #h=1A2B");
 
-  // Longueurs LoRaWAN: AppEui=16 hex, AppKey=32 hex
+  // LoRaWAN: AppEui = 16 hex, AppKey = 32 hex
   const needEui = 16 - APP_EUI_PREFIX.length;
   const needKey = 32 - APP_KEY_PREFIX.length;
   if (needEui <= 0) throw new Error("APP_EUI_PREFIX trop long (doit être < 16 hex).");
@@ -81,8 +76,8 @@ function buildCfgFromHarmony(){
   if (appEui.length !== 16 || !isHex(appEui)) throw new Error("AppEui généré invalide.");
   if (appKey.length !== 32 || !isHex(appKey)) throw new Error("AppKey généré invalide.");
 
-  // Minimal pour JOIN (tu peux laisser defaults)
-  const ota  = params.get("o") ?? "1"; // OTAA
+  // Defaults minimal join
+  const ota  = params.get("o") ?? "1";
   const ack  = params.get("a") ?? "0";
   const port = params.get("p") ?? "5";
 
@@ -96,31 +91,26 @@ function buildCfgFromHarmony(){
   return lines.join("\n");
 }
 
-/** ===== Web NFC write ===== **/
 async function writeNfcText(text){
-  if (!("NDEFWriter" in window)) {
-    throw new Error("Web NFC indisponible ici. Ouvre dans Chrome Android (pas iPhone / pas navigateur intégré).");
+  // ✅ Web NFC moderne : NDEFReader (pas NDEFWriter)
+  if (!("NDEFReader" in window)) {
+    throw new Error("Web NFC indisponible : NDEFReader absent dans ce navigateur.");
   }
   if (!window.isSecureContext) {
-    throw new Error("Contexte non sécurisé. Il faut HTTPS.");
+    throw new Error("Contexte non sécurisé (il faut HTTPS).");
   }
-  // Top-level recommandé
-  if (window.top !== window) {
-    throw new Error("Page ouverte dans un conteneur (webview/iframe). Ouvre 'dans Chrome'.");
-  }
-
-  const writer = new NDEFWriter();
-  await writer.write({ records: [{ recordType: "text", data: text, lang: "en" }] });
+  // Écriture (déclenche le prompt permission NFC si besoin) :contentReference[oaicite:2]{index=2}
+  const ndef = new NDEFReader();
+  await ndef.write({ records: [{ recordType: "text", data: text, lang: "en" }] });
 }
 
-/** ===== UI ===== **/
-function refresh(){
+function refresh() {
   const diag = [];
   diag.push(`HTTPS (secureContext): ${window.isSecureContext}`);
-  diag.push(`NDEFWriter présent: ${"NDEFWriter" in window}`);
+  diag.push(`NDEFReader présent: ${"NDEFReader" in window}`);
   diag.push(`Top-level: ${window.top === window}`);
-  diag.push(`User-Agent: ${navigator.userAgent}`);
-  $("diag").innerHTML = "<div class='muted'>" + diag.map(esc).join("<br>") + "</div>";
+  diag.push(`UA: ${navigator.userAgent}`);
+  $("diag").textContent = diag.join("\n");
 
   try {
     const cfg = buildCfgFromHarmony();
@@ -138,7 +128,7 @@ $("writeBtn").addEventListener("click", async () => {
     const cfg = buildCfgFromHarmony();
     $("status").innerHTML = "<span class='muted'>Approche la sonde…</span>";
     await writeNfcText(cfg);
-    $("status").innerHTML = "<span class='ok'>OK: écrit en NFC.</span> Redémarre la sonde pour lancer le JOIN.";
+    $("status").innerHTML = "<span class='ok'>OK : écrit en NFC.</span> Redémarre la sonde pour lancer le JOIN.";
   } catch (e) {
     $("status").innerHTML = "<span class='ko'>Erreur: </span>" + esc(e.message || e);
   }
