@@ -3,493 +3,149 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Elsys NFC Provision</title>
-  <meta name="theme-color" content="#111111">
+  <title>Elsys NFC - Harmony</title>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:22px;max-width:980px}
-    .muted{opacity:.75}
-    .card{border:1px solid #e6e6e6;border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 1px 10px rgba(0,0,0,.04)}
-    h1{font-size:22px;margin:0 0 6px}
-    h2{margin:0 0 10px;font-size:18px}
-    h3{margin:12px 0 8px;font-size:15px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    @media (max-width:900px){ .row{grid-template-columns:1fr} }
-    button{font-size:16px;padding:12px 14px;border-radius:12px;border:0;cursor:pointer;width:100%}
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:18px;max-width:720px}
+    .card{border:1px solid #e6e6e6;border-radius:14px;padding:14px;margin:12px 0}
+    button{font-size:18px;padding:14px 14px;border-radius:12px;border:0;cursor:pointer;width:100%}
     button.primary{background:#111;color:#fff}
-    button.secondary{background:#f2f2f2}
-    button:disabled{opacity:.5;cursor:not-allowed}
-    pre, textarea, input, select{
-      width:100%; box-sizing:border-box;
-      border:1px solid #ddd; border-radius:12px; padding:10px;
-    }
-    pre, textarea{
-      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      background:#fafafa;
-      white-space:pre-wrap;
-      word-break:break-word;
-    }
-    input, select { font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:#fff; }
-    textarea{min-height:140px}
+    pre{white-space:pre-wrap;word-break:break-word;background:#fafafa;border:1px solid #ddd;border-radius:12px;padding:10px}
+    .muted{opacity:.75}
     .ok{color:#0a7a20;font-weight:700}
     .ko{color:#b00020;font-weight:700}
-    .tabs{display:flex;gap:8px;flex-wrap:wrap}
-    .tab{padding:8px 12px;border-radius:999px;border:1px solid #ddd;cursor:pointer;background:#fff}
-    .tab.active{background:#111;color:#fff;border-color:#111}
-    .small{font-size:13px}
     code{background:#f2f2f2;padding:2px 6px;border-radius:8px}
   </style>
 </head>
-
 <body>
-  <h1>Elsys NFC Provision (Web NFC)</h1>
+  <h2>Elsys NFC (Harmony ID)</h2>
   <div class="muted">
-    Sans appli : fonctionne uniquement sur <b>Android + Chrome</b> (HTTPS).<br>
-    QR court recommandé : <code>#h=&lt;id_harmony&gt;</code>
-  </div>
-
-  <div class="card small">
-    💡 Astuce : tout ce qui est après <b>#</b> dans l’URL n’est pas envoyé au serveur.  
-    Exemple : <code>#h=1A2B</code>
+    Ouvre dans <b>Chrome Android</b> (HTTPS).<br>
+    URL attendue : <code>#h=1A2B</code> (optionnel : <code>&p=5&a=0</code>)
   </div>
 
   <div class="card">
-    <div class="tabs">
-      <div class="tab active" id="tabScan">Mode Scan (QR → Écrire)</div>
-      <div class="tab" id="tabHarmony">Mode Harmony ID (QR ultra court)</div>
-      <div class="tab" id="tabRaw">Mode Brut (Key:Value)</div>
-    </div>
+    <div><b>Configuration générée (ce qui sera écrit en NFC)</b></div>
+    <pre id="cfg">(lecture...)</pre>
+    <p id="status" class="muted"></p>
+    <button class="primary" id="writeBtn">ÉCRIRE DANS LA SONDE (NFC)</button>
   </div>
 
-  <!-- MODE SCAN -->
-  <div class="card" id="paneScan">
-    <h2>Mode Scan</h2>
-    <div class="muted small">
-      La config est calculée depuis l’URL (fragment <code>#...</code>), soit via <code>#h=</code>, soit via le format long.
-    </div>
-
-    <h3>Config à écrire (calculée)</h3>
-    <pre id="cfgPreview">(aucune config dans l’URL)</pre>
-
-    <div class="row" style="margin-top:10px;">
-      <button class="primary" id="writeBtn">ÉCRIRE DANS LA SONDE (NFC)</button>
-      <button class="secondary" id="readBtn">LIRE LA SONDE (NFC)</button>
-    </div>
-    <p id="status" class="small" style="margin:10px 0 0;"></p>
-  </div>
-
-  <!-- MODE HARMONY -->
-  <div class="card" id="paneHarmony" style="display:none;">
-    <h2>Mode Harmony ID (QR ultra court)</h2>
-    <div class="muted small">
-      Tu mets seulement l’ID Harmony dans le QR : <code>#h=1A2B</code><br>
-      La page calcule automatiquement :
-      <ul>
-        <li><code>AppEui = APP_EUI_PREFIX + &lt;id_harmony&gt;</code> (paddé pour faire 16 hex)</li>
-        <li><code>AppKey = APP_KEY_PREFIX + &lt;id_harmony&gt;</code> (paddé pour faire 32 hex)</li>
-      </ul>
-      ⚠️ Tes préfixes doivent être plus courts que 16 (AppEui) et 32 (AppKey) en hex.
-    </div>
-
-    <div class="row">
-      <div>
-        <label><b>ID Harmony</b> (hex, ex: 1A2B, 000F, 12ABCD)</label>
-        <input id="h_id" placeholder="1A2B" />
-        <div class="muted small">Conseil : reste sur un ID court en hex, ça garde le QR petit.</div>
-      </div>
-      <div>
-        <label><b>Options (facultatif)</b></label>
-        <div class="row" style="grid-template-columns:1fr 1fr;gap:8px">
-          <div><input id="h_spl" type="number" placeholder="spl (SplPer) = 60" /></div>
-          <div><input id="h_tp" type="number" placeholder="tp (TempPer) = 1" /></div>
-        </div>
-        <div class="row" style="grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-          <div><input id="h_sp" type="number" placeholder="sp (SendPer) = 10" /></div>
-          <div><input id="h_p"  type="number" placeholder="p (Port) = 5" /></div>
-        </div>
-        <div class="row" style="grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-          <div>
-            <select id="h_a">
-              <option value="">a (Ack) = 0 (défaut)</option>
-              <option value="0">a=0 (unconfirmed)</option>
-              <option value="1">a=1 (confirmed)</option>
-            </select>
-          </div>
-          <div>
-            <select id="h_o">
-              <option value="">o (Ota) = 1 (défaut)</option>
-              <option value="1">o=1 (OTAA)</option>
-              <option value="0">o=0 (ABP) ⚠️</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:10px;">
-      <button class="secondary" id="h_makeUrlBtn">GÉNÉRER URL COURTE (pour QR)</button>
-      <button class="secondary" id="h_copyUrlBtn">COPIER L’URL</button>
-    </div>
-
-    <h3>URL à mettre dans le QR</h3>
-    <pre id="h_urlOut"></pre>
-
-    <h3>Config générée (ce qui sera écrit en NFC)</h3>
-    <pre id="h_cfgOut"></pre>
-  </div>
-
-  <!-- MODE RAW -->
-  <div class="card" id="paneRaw" style="display:none;">
-    <h2>Mode Brut (Key:Value)</h2>
-    <div class="muted small">
-      Colle des lignes <code>Key:Value</code> (une par ligne), puis génère l’URL longue (moins adapté au 9mm).
-    </div>
-    <textarea id="rawEditor" spellcheck="false" placeholder="Ota:1&#10;Ack:0&#10;AppEui:1122334455667788&#10;AppKey:001122...&#10;SplPer:60&#10;TempPer:1&#10;SendPer:10&#10;Port:5"></textarea>
-
-    <div class="row" style="margin-top:10px;">
-      <button class="secondary" id="rawToUrlBtn">METTRE DANS L’URL (#...)</button>
-      <button class="secondary" id="rawCopyUrlBtn">COPIER L’URL</button>
-    </div>
-
-    <h3>URL générée</h3>
-    <pre id="rawOut"></pre>
+  <div class="card">
+    <div><b>Diagnostic</b></div>
+    <div class="muted" id="diag"></div>
   </div>
 
 <script>
-  /******************************************************************
-   * ⚠️ À ADAPTER ICI : tes préfixes (HEX)
-   ******************************************************************/
-  const APP_EUI_PREFIX = "EF1C1AEF1C1A";             // ex: "EF1C1AEF1C1A"
-  const APP_KEY_PREFIX = "EF1C1AEF1C1AEF1C1AEF1C1AFFFF"; // ex: "EF1C1AEF1C1AEF1C1AEF1C1AFFFF"
+/** ===== À ADAPTER ===== **/
+const APP_EUI_PREFIX = "EF1C1AEF1C1A";                 // AppEui/JoinEUI prefix (hex)
+const APP_KEY_PREFIX = "EF1C1AEF1C1AEF1C1AEF1C1AFFFF"; // AppKey prefix (hex)
 
-  /******************************************************************
-   * Helpers
-   ******************************************************************/
-  const $ = (id) => document.getElementById(id);
-  const statusEl = $("status");
-  const cfgPreview = $("cfgPreview");
+/** ===== Helpers ===== **/
+const $ = (id) => document.getElementById(id);
+function esc(s){ return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+function isHex(s){ return /^[0-9A-F]+$/i.test(s); }
+function padLeftHex(hex, len){
+  hex = (hex||"").toUpperCase().replace(/[^0-9A-F]/g,"");
+  return hex.padStart(len,"0");
+}
+function addLine(lines,k,v){
+  if (v===null || v===undefined) return;
+  const s = String(v).trim();
+  if (!s) return;
+  lines.push(`${k}:${s}`);
+}
 
-  function esc(s){ return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
-  function setStatus(html) { statusEl.innerHTML = html; }
+/** ===== Parse hash ===== **/
+function getParamsFromHash(){
+  const raw = decodeURIComponent((location.hash||"").replace(/^#/,"")).trim();
+  return new URLSearchParams(raw); // accepte h=...&p=... etc.
+}
 
-  function normalizeCfg(text) {
-    return (text || "")
-      .split(/\r?\n/)
-      .map(l => l.trim())
-      .filter(Boolean)
-      .join("\n");
+function buildCfgFromHarmony(){
+  const params = getParamsFromHash();
+  const hid = (params.get("h") || "").toUpperCase().replace(/[^0-9A-F]/g,"");
+  if (!hid) throw new Error("ID Harmony manquant. Exemple: #h=1A2B");
+
+  // Longueurs LoRaWAN: AppEui=16 hex, AppKey=32 hex
+  const needEui = 16 - APP_EUI_PREFIX.length;
+  const needKey = 32 - APP_KEY_PREFIX.length;
+  if (needEui <= 0) throw new Error("APP_EUI_PREFIX trop long (doit être < 16 hex).");
+  if (needKey <= 0) throw new Error("APP_KEY_PREFIX trop long (doit être < 32 hex).");
+
+  const idEui = padLeftHex(hid, needEui).slice(-needEui);
+  const idKey = padLeftHex(hid, needKey).slice(-needKey);
+
+  const appEui = (APP_EUI_PREFIX + idEui).toUpperCase();
+  const appKey = (APP_KEY_PREFIX + idKey).toUpperCase();
+
+  if (appEui.length !== 16 || !isHex(appEui)) throw new Error("AppEui généré invalide.");
+  if (appKey.length !== 32 || !isHex(appKey)) throw new Error("AppKey généré invalide.");
+
+  // Minimal pour JOIN (tu peux laisser defaults)
+  const ota  = params.get("o") ?? "1"; // OTAA
+  const ack  = params.get("a") ?? "0";
+  const port = params.get("p") ?? "5";
+
+  const lines = [];
+  addLine(lines, "Ota", ota);
+  addLine(lines, "Ack", ack);
+  addLine(lines, "AppEui", appEui);
+  addLine(lines, "AppKey", appKey);
+  addLine(lines, "Port", port);
+
+  return lines.join("\n");
+}
+
+/** ===== Web NFC write ===== **/
+async function writeNfcText(text){
+  if (!("NDEFWriter" in window)) {
+    throw new Error("Web NFC indisponible ici. Ouvre dans Chrome Android (pas iPhone / pas navigateur intégré).");
+  }
+  if (!window.isSecureContext) {
+    throw new Error("Contexte non sécurisé. Il faut HTTPS.");
+  }
+  // Top-level recommandé
+  if (window.top !== window) {
+    throw new Error("Page ouverte dans un conteneur (webview/iframe). Ouvre 'dans Chrome'.");
   }
 
-  function cfgToHash(cfgText) {
-    const lines = normalizeCfg(cfgText).split("\n");
-    return encodeURIComponent(lines.join("|"));
+  const writer = new NDEFWriter();
+  await writer.write({ records: [{ recordType: "text", data: text, lang: "en" }] });
+}
+
+/** ===== UI ===== **/
+function refresh(){
+  const diag = [];
+  diag.push(`HTTPS (secureContext): ${window.isSecureContext}`);
+  diag.push(`NDEFWriter présent: ${"NDEFWriter" in window}`);
+  diag.push(`Top-level: ${window.top === window}`);
+  diag.push(`User-Agent: ${navigator.userAgent}`);
+  $("diag").innerHTML = "<div class='muted'>" + diag.map(esc).join("<br>") + "</div>";
+
+  try {
+    const cfg = buildCfgFromHarmony();
+    $("cfg").textContent = cfg;
+    $("status").innerHTML = "<span class='muted'>Prêt. Clique sur ÉCRIRE puis colle le téléphone sur la sonde.</span>";
+  } catch (e) {
+    $("cfg").textContent = "(erreur)";
+    $("status").innerHTML = "<span class='ko'>Erreur: </span>" + esc(e.message || e);
   }
+}
 
-  function currentLinkWithHash(hashValue) {
-    const base = location.origin + location.pathname;
-    return base + "#" + hashValue;
+$("writeBtn").addEventListener("click", async () => {
+  $("status").textContent = "";
+  try {
+    const cfg = buildCfgFromHarmony();
+    $("status").innerHTML = "<span class='muted'>Approche la sonde…</span>";
+    await writeNfcText(cfg);
+    $("status").innerHTML = "<span class='ok'>OK: écrit en NFC.</span> Redémarre la sonde pour lancer le JOIN.";
+  } catch (e) {
+    $("status").innerHTML = "<span class='ko'>Erreur: </span>" + esc(e.message || e);
   }
+});
 
-  function isHex(s) {
-    return /^[0-9A-F]+$/i.test(s);
-  }
-
-  function padLeftHex(hex, len) {
-    hex = (hex || "").toUpperCase().replace(/[^0-9A-F]/g, "");
-    return hex.padStart(len, "0");
-  }
-
-  function addLine(lines, k, v) {
-    if (v === null || v === undefined) return;
-    const s = String(v).trim();
-    if (!s) return;
-    lines.push(`${k}:${s}`);
-  }
-
-  /******************************************************************
-   * Génération AppEui/AppKey à partir de l’ID Harmony
-   ******************************************************************/
-  function buildCfgFromHarmonyId(harmonyId, params) {
-    const lines = [];
-
-    const needEui = 16 - APP_EUI_PREFIX.length; // AppEui = 16 hex
-    const needKey = 32 - APP_KEY_PREFIX.length; // AppKey = 32 hex
-
-    if (needEui <= 0) throw new Error("APP_EUI_PREFIX trop long (doit être < 16 hex).");
-    if (needKey <= 0) throw new Error("APP_KEY_PREFIX trop long (doit être < 32 hex).");
-
-    // On remplit exactement la longueur manquante
-    const idEui = padLeftHex(harmonyId, needEui).slice(-needEui);
-    const idKey = padLeftHex(harmonyId, needKey).slice(-needKey);
-
-    const appEui = (APP_EUI_PREFIX + idEui).toUpperCase();
-    const appKey = (APP_KEY_PREFIX + idKey).toUpperCase();
-
-    if (appEui.length !== 16 || !isHex(appEui)) throw new Error("AppEui généré invalide.");
-    if (appKey.length !== 32 || !isHex(appKey)) throw new Error("AppKey généré invalide.");
-
-    // Defaults (ultra simples)
-    const ota = params.get("o") ?? "1";
-    const ack = params.get("a") ?? "0";
-    const port = params.get("p") ?? "5";
-    const spl  = params.get("spl") ?? "60";
-    const tp   = params.get("tp") ?? "1";
-    const sp   = params.get("sp") ?? "10";
-
-    addLine(lines, "Ota", ota);
-    addLine(lines, "Ack", ack);
-    addLine(lines, "AppEui", appEui);
-    addLine(lines, "AppKey", appKey);
-    addLine(lines, "Port", port);
-
-    // Periods (tu peux enlever si tu veux encore plus minimal)
-    addLine(lines, "SplPer", spl);
-    addLine(lines, "TempPer", tp);
-    addLine(lines, "SendPer", sp);
-
-    return lines.join("\n");
-  }
-
-  /******************************************************************
-   * Parse URL hash
-   ******************************************************************/
-  function parseCfgFromHash() {
-    const raw = decodeURIComponent((location.hash || "").replace(/^#/, "")).trim();
-    if (!raw) return "";
-
-    // Format court: #h=1A2B&spl=60&tp=1&sp=10&p=5&a=0&o=1
-    if (raw.startsWith("h=") || raw.includes("&h=")) {
-      const params = new URLSearchParams(raw);
-      const hid = (params.get("h") || "").toUpperCase().replace(/[^0-9A-F]/g, "");
-      if (!hid) throw new Error("ID Harmony manquant (#h=...).");
-      return buildCfgFromHarmonyId(hid, params);
-    }
-
-    // Ancien format long: #Key:Value|Key:Value|...
-    return (raw.includes("|") ? raw.split("|").join("\n") : raw);
-  }
-
-  function refreshPreview() {
-    try {
-      const cfg = parseCfgFromHash();
-      cfgPreview.textContent = cfg || "(aucune config dans l’URL)";
-    } catch (e) {
-      cfgPreview.textContent = "(erreur de config)";
-      setStatus('<span class="ko">Erreur :</span> ' + esc(e.message || String(e)));
-    }
-  }
-
-  /******************************************************************
-   * Tabs
-   ******************************************************************/
-  function setTab(which) {
-    const tabs = {
-      Scan:["tabScan","paneScan"],
-      Harmony:["tabHarmony","paneHarmony"],
-      Raw:["tabRaw","paneRaw"]
-    };
-    for (const k of Object.keys(tabs)) {
-      const [t,p] = tabs[k];
-      $(t).classList.toggle("active", k===which);
-      $(p).style.display = (k===which) ? "" : "none";
-    }
-  }
-  $("tabScan").onclick = () => setTab("Scan");
-  $("tabHarmony").onclick = () => setTab("Harmony");
-  $("tabRaw").onclick = () => setTab("Raw");
-
-  /******************************************************************
-   * Web NFC
-   ******************************************************************/
-  const hasWebNfc = ("NDEFWriter" in window) && ("NDEFReader" in window);
-
-  function requireWebNfcOrExplain() {
-    if (!hasWebNfc) {
-      setStatus('<span class="ko">Web NFC non supporté.</span> Utilise Android + Chrome (HTTPS).');
-      return false;
-    }
-    return true;
-  }
-
-  async function writeCfgToNfc(cfg) {
-    const writer = new NDEFWriter();
-    await writer.write({ records: [{ recordType: "text", data: cfg, lang: "en" }] });
-  }
-
-  async function readOnceFromNfc(timeoutMs=15000) {
-    const reader = new NDEFReader();
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), timeoutMs);
-
-    return new Promise(async (resolve, reject) => {
-      try {
-        reader.onreadingerror = () => reject(new Error("Lecture NFC impossible (re-tape la sonde)."));
-        reader.onreading = (event) => {
-          try {
-            const recs = event.message.records || [];
-            for (const r of recs) {
-              if (r.recordType === "text") {
-                const txt = new TextDecoder(r.encoding || "utf-8").decode(r.data);
-                clearTimeout(t); ac.abort(); resolve(txt); return;
-              }
-            }
-            clearTimeout(t); ac.abort();
-            resolve("(Pas de record texte trouvé)");
-          } catch (e) {
-            clearTimeout(t); ac.abort(); reject(e);
-          }
-        };
-        await reader.scan({ signal: ac.signal });
-      } catch (e) {
-        clearTimeout(t); reject(e);
-      }
-    });
-  }
-
-  $("writeBtn").onclick = async () => {
-    setStatus("");
-    if (!requireWebNfcOrExplain()) return;
-
-    let cfg = "";
-    try { cfg = parseCfgFromHash(); } catch (e) {
-      setStatus('<span class="ko">Erreur config :</span> ' + esc(e.message || String(e)));
-      return;
-    }
-
-    if (!cfg) {
-      setStatus('<span class="ko">Aucune config dans l’URL.</span> Utilise le mode Harmony (#h=...) ou colle une config brute.');
-      return;
-    }
-
-    try {
-      setStatus("Approche la sonde… (écriture NFC)");
-      await writeCfgToNfc(cfg);
-      setStatus('<span class="ok">OK : config écrite.</span> Redémarre la sonde pour déclencher le JOIN.');
-    } catch (e) {
-      setStatus('<span class="ko">Erreur écriture NFC :</span> ' + esc(e.message || String(e)));
-    }
-  };
-
-  $("readBtn").onclick = async () => {
-    setStatus("");
-    if (!requireWebNfcOrExplain()) return;
-
-    try {
-      setStatus("Approche la sonde… (lecture NFC)");
-      const txt = await readOnceFromNfc();
-      setStatus('<span class="ok">Lecture OK.</span> Contenu affiché ci-dessus.');
-      cfgPreview.textContent = txt;
-    } catch (e) {
-      setStatus('<span class="ko">Erreur lecture NFC :</span> ' + esc(e.message || String(e)));
-    }
-  };
-
-  /******************************************************************
-   * Harmony URL generator
-   ******************************************************************/
-  function makeHarmonyUrl(copyToHash=false) {
-    const hid = ($("h_id").value || "").toUpperCase().replace(/[^0-9A-F]/g, "");
-    if (!hid) throw new Error("ID Harmony vide.");
-
-    const params = new URLSearchParams();
-    params.set("h", hid);
-
-    // Ajoute seulement si renseigné (garde le QR court)
-    const spl = $("h_spl").value.trim();
-    const tp  = $("h_tp").value.trim();
-    const sp  = $("h_sp").value.trim();
-    const p   = $("h_p").value.trim();
-    const a   = $("h_a").value.trim();
-    const o   = $("h_o").value.trim();
-
-    if (spl) params.set("spl", spl);
-    if (tp)  params.set("tp", tp);
-    if (sp)  params.set("sp", sp);
-    if (p)   params.set("p", p);
-    if (a)   params.set("a", a);
-    if (o)   params.set("o", o);
-
-    const hash = params.toString(); // ex: h=1A2B&spl=60...
-    const url = currentLinkWithHash(hash);
-
-    // Build config preview from the same params
-    const cfg = buildCfgFromHarmonyId(hid, params);
-
-    if (copyToHash) location.hash = hash;
-
-    return { url, cfg, hash };
-  }
-
-  $("h_makeUrlBtn").onclick = () => {
-    setStatus("");
-    try {
-      const { url, cfg, hash } = makeHarmonyUrl(true);
-      $("h_urlOut").textContent = url;
-      $("h_cfgOut").textContent = cfg;
-      refreshPreview();
-      setStatus('<span class="ok">OK.</span> URL prête → mets-la dans le QR (P-Touch).');
-    } catch (e) {
-      setStatus('<span class="ko">Erreur :</span> ' + esc(e.message || String(e)));
-    }
-  };
-
-  $("h_copyUrlBtn").onclick = async () => {
-    setStatus("");
-    try {
-      const { url, cfg } = makeHarmonyUrl(false);
-      $("h_urlOut").textContent = url;
-      $("h_cfgOut").textContent = cfg;
-
-      try { await navigator.clipboard.writeText(url); } catch {}
-      setStatus('<span class="ok">URL copiée.</span>');
-    } catch (e) {
-      setStatus('<span class="ko">Erreur :</span> ' + esc(e.message || String(e)));
-    }
-  };
-
-  /******************************************************************
-   * Raw URL generator
-   ******************************************************************/
-  $("rawToUrlBtn").onclick = () => {
-    setStatus("");
-    const cfg = normalizeCfg($("rawEditor").value);
-    if (!cfg) { setStatus('<span class="ko">Config vide.</span>'); return; }
-
-    const url = currentLinkWithHash(cfgToHash(cfg));
-    $("rawOut").textContent = url;
-    location.hash = cfgToHash(cfg);
-    refreshPreview();
-    setStatus('<span class="ok">OK.</span> URL générée.');
-  };
-
-  $("rawCopyUrlBtn").onclick = async () => {
-    setStatus("");
-    const cfg = normalizeCfg($("rawEditor").value);
-    if (!cfg) { setStatus('<span class="ko">Config vide.</span>'); return; }
-
-    const url = currentLinkWithHash(cfgToHash(cfg));
-    $("rawOut").textContent = url;
-    try { await navigator.clipboard.writeText(url); } catch {}
-    setStatus('<span class="ok">URL copiée.</span>');
-  };
-
-  /******************************************************************
-   * Service Worker (offline après 1ère ouverture)
-   ******************************************************************/
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js").catch(() => {});
-    });
-  }
-
-  // Init
-  refreshPreview();
-  if (!hasWebNfc) {
-    $("writeBtn").disabled = true;
-    $("readBtn").disabled = true;
-    setStatus('<span class="ko">Web NFC non supporté.</span> Android + Chrome uniquement.');
-  }
-
-  window.addEventListener("hashchange", refreshPreview);
+window.addEventListener("hashchange", refresh);
+refresh();
 </script>
 </body>
 </html>
