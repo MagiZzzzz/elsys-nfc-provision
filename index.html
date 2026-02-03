@@ -12,22 +12,41 @@
     button{font-size:18px;padding:14px;border-radius:12px;border:0;cursor:pointer;width:100%}
     button.primary{background:#111;color:#fff}
     button.secondary{background:#f2f2f2}
+    button.good{background:#0a7a20 !important;color:#fff}
+    button.bad{background:#b00020 !important;color:#fff}
     pre{white-space:pre-wrap;word-break:break-word;background:#fafafa;border:1px solid #ddd;border-radius:12px;padding:10px}
     .muted{opacity:.75}
     .ok{color:#0a7a20;font-weight:700}
     .ko{color:#b00020;font-weight:700}
     code{background:#f2f2f2;padding:2px 6px;border-radius:8px}
-    .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#f2f2f2;font-size:12px;margin-left:8px}
+    .big{font-size:20px}
+    a.btnlink{display:block;text-decoration:none;text-align:center;padding:14px;border-radius:12px;background:#111;color:#fff;font-size:18px}
   </style>
 </head>
+
 <body>
   <h2>Elsys NFC (Harmony ID)</h2>
   <div class="muted">
-    URL attendue : <code>#h=8001</code> (optionnel : <code>&p=5&a=0</code>) <span class="badge">Android + Chrome</span>
+    URL attendue : <code>?h=8001</code> ou <code>#h=8001</code>
+    (optionnel : <code>&p=5&a=0</code>)
   </div>
 
-  <div class="card">
-    <b>Config attendue (ce qui doit être écrit)</b>
+  <!-- GATE: affiché si Web NFC pas dispo -->
+  <div class="card" id="gate" style="display:none;">
+    <div class="big"><b>⚠️ Ce navigateur ne supporte pas la config NFC.</b></div>
+    <div class="muted" style="margin-top:6px">
+      Ouvre cette page dans <b>Google Chrome</b> sur Android, puis réessaie.
+    </div>
+    <div class="row" style="margin-top:12px;">
+      <a id="openChromeLink" class="btnlink" href="#">Ouvrir dans Chrome</a>
+      <button id="copyLinkBtn" class="secondary">Copier le lien</button>
+    </div>
+    <div class="muted" style="margin-top:10px" id="gateHint"></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="card" id="main">
+    <b>Config attendue (écrite en NFC)</b>
     <pre id="expected">(lecture...)</pre>
 
     <div class="row" style="margin-top:10px;">
@@ -39,9 +58,8 @@
   </div>
 
   <div class="card">
-    <b>Contenu NFC lu sur la sonde</b>
+    <b>Contenu NFC lu</b>
     <pre id="readOut">(rien lu pour l’instant)</pre>
-    <div id="compareOut" class="muted" style="margin-top:10px;"></div>
   </div>
 
   <div class="card">
@@ -50,9 +68,9 @@
   </div>
 
 <script>
-/** ===== À ADAPTER ===== **/
-const APP_EUI_PREFIX = "EF1C1AEF1C1A";                  // hex
-const APP_KEY_PREFIX = "EF1C1AEF1C1AEF1C1AEF1C1AFFFF";  // hex
+/** ===== À ADAPTER (HEX) ===== **/
+const APP_EUI_PREFIX = "EF1C1AEF1C1A";
+const APP_KEY_PREFIX = "EF1C1AEF1C1AEF1C1AEF1C1AFFFF";
 
 /** ===== Helpers ===== **/
 const $ = (id) => document.getElementById(id);
@@ -69,35 +87,24 @@ function addLine(lines,k,v){
   lines.push(`${k}:${s}`);
 }
 function normalizeCfg(text){
-  return (text||"")
-    .split(/\r?\n/)
-    .map(l => l.trim())
-    .filter(Boolean)
-    .join("\n");
-}
-function cfgToMap(text){
-  const m = new Map();
-  for (const line of normalizeCfg(text).split("\n")) {
-    const idx = line.indexOf(":");
-    if (idx < 0) continue;
-    const k = line.slice(0, idx).trim();
-    const v = line.slice(idx+1).trim();
-    if (k) m.set(k, v);
-  }
-  return m;
-}
-function getParamsFromHash(){
-  const raw = decodeURIComponent((location.hash||"").replace(/^#/,"")).trim();
-  return new URLSearchParams(raw);
+  return (text||"").split(/\r?\n/).map(l=>l.trim()).filter(Boolean).join("\n");
 }
 
-/** ===== Build expected config from #h=... ===== **/
+/** ===== Params: accepte ?h=... OU #h=... ===== **/
+function getParams() {
+  const hash = (location.hash || "").replace(/^#/, "").trim();
+  const search = (location.search || "").replace(/^\?/, "").trim();
+  const src = hash ? hash : search;
+  return new URLSearchParams(decodeURIComponent(src));
+}
+
+/** ===== Build expected config from h=... ===== **/
 function buildCfgFromHarmony() {
-  const params = getParamsFromHash();
+  const params = getParams();
   const hid = (params.get("h") || "").toUpperCase().replace(/[^0-9A-F]/g,"");
-  if (!hid) throw new Error("ID Harmony manquant. Exemple: #h=8001");
+  if (!hid) throw new Error("ID Harmony manquant. Exemple: ?h=8001");
 
-  // LoRaWAN: AppEui = 16 hex, AppKey = 32 hex
+  // LoRaWAN sizes: AppEui=16 hex, AppKey=32 hex
   const needEui = 16 - APP_EUI_PREFIX.length;
   const needKey = 32 - APP_KEY_PREFIX.length;
   if (needEui <= 0) throw new Error("APP_EUI_PREFIX trop long (doit être < 16 hex).");
@@ -112,7 +119,6 @@ function buildCfgFromHarmony() {
   if (appEui.length !== 16 || !isHex(appEui)) throw new Error("AppEui généré invalide.");
   if (appKey.length !== 32 || !isHex(appKey)) throw new Error("AppKey généré invalide.");
 
-  // Minimal join defaults
   const ota  = params.get("o") ?? "1";
   const ack  = params.get("a") ?? "0";
   const port = params.get("p") ?? "5";
@@ -124,163 +130,171 @@ function buildCfgFromHarmony() {
   addLine(lines, "AppKey", appKey);
   addLine(lines, "Port", port);
 
-  // (Optionnel) si tu veux forcer des periods via l’URL courte :
-  // spl=60&tp=1&sp=10
-  const spl = params.get("spl");
-  const tp  = params.get("tp");
-  const sp  = params.get("sp");
-  addLine(lines, "SplPer", spl);
-  addLine(lines, "TempPer", tp);
-  addLine(lines, "SendPer", sp);
+  // Optionnels si tu veux les mettre parfois: &spl=60&tp=1&sp=10
+  addLine(lines, "SplPer", params.get("spl"));
+  addLine(lines, "TempPer", params.get("tp"));
+  addLine(lines, "SendPer", params.get("sp"));
 
   return lines.join("\n");
 }
 
-/** ===== Web NFC (NDEFReader) ===== **/
+/** ===== Web NFC ===== **/
+function webNfcAvailable() {
+  return window.isSecureContext && ("NDEFReader" in window);
+}
 function ensureWebNfc(){
-  if (!("NDEFReader" in window)) {
-    throw new Error("Web NFC indisponible : NDEFReader absent (pas le bon navigateur/contexte).");
-  }
-  if (!window.isSecureContext) {
-    throw new Error("Contexte non sécurisé : il faut HTTPS.");
-  }
+  if (!window.isSecureContext) throw new Error("HTTPS requis.");
+  if (!("NDEFReader" in window)) throw new Error("Web NFC indisponible dans ce navigateur.");
 }
 
 async function writeNfcText(text){
   ensureWebNfc();
+  // API moderne: NDEFReader.write()
   const ndef = new NDEFReader();
   await ndef.write({ records: [{ recordType: "text", data: text, lang: "en" }] });
 }
 
-async function readNfcOnce(timeoutMs=15000){
+async function readNfcOnce(timeoutMs=60000){
   ensureWebNfc();
   const ndef = new NDEFReader();
   const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), timeoutMs);
+  const t = setTimeout(() => ac.abort("timeout"), timeoutMs);
 
-  return new Promise(async (resolve, reject) => {
-    try {
-      ndef.onreadingerror = () => reject(new Error("Lecture NFC impossible (retape la sonde)."));
-      ndef.onreading = (event) => {
-        try {
-          const records = event.message.records || [];
-          // On cherche un record texte (Elsys stocke généralement la config en texte)
-          for (const r of records) {
-            if (r.recordType === "text") {
-              const txt = new TextDecoder(r.encoding || "utf-8").decode(r.data);
-              clearTimeout(t); ac.abort();
-              resolve(txt);
-              return;
-            }
+  const p = new Promise(async (resolve, reject) => {
+    ndef.onreadingerror = () => reject(new Error("Lecture NFC impossible (retape la sonde en restant immobile 2–3s)."));
+    ndef.onreading = (event) => {
+      try {
+        const out = [];
+        for (const r of (event.message.records || [])) {
+          const dataBuf = (r.data && r.data.buffer) ? r.data.buffer : r.data;
+          if (r.recordType === "text") {
+            out.push(new TextDecoder(r.encoding || "utf-8").decode(dataBuf));
+          } else {
+            // fallback: tente texte
+            try { out.push(new TextDecoder("utf-8").decode(dataBuf)); }
+            catch { out.push(`[${r.recordType}]`); }
           }
-          // Si pas de texte, on affiche un résumé
-          clearTimeout(t); ac.abort();
-          resolve("(Aucun record texte trouvé sur le tag NFC)");
-        } catch (e) {
-          clearTimeout(t); ac.abort();
-          reject(e);
         }
-      };
+        clearTimeout(t);
+        ac.abort("done");
+        resolve(out.join("\n").trim() || "(Tag lu, mais aucun texte lisible)");
+      } catch (e) {
+        clearTimeout(t);
+        ac.abort("err");
+        reject(e);
+      }
+    };
 
+    try {
       await ndef.scan({ signal: ac.signal });
     } catch (e) {
       clearTimeout(t);
       reject(e);
     }
   });
+
+  return p;
 }
 
-/** ===== Compare ===== **/
-function compareConfigs(expectedText, readText){
-  const expected = cfgToMap(expectedText);
-  const read = cfgToMap(readText);
-
-  const missing = [];
-  const diff = [];
-  for (const [k, v] of expected.entries()) {
-    if (!read.has(k)) missing.push(k);
-    else if (read.get(k) !== v) diff.push({k, expected:v, got:read.get(k)});
-  }
-
-  // Les extra keys ne sont pas bloquantes (la sonde peut stocker d'autres params)
-  const extras = [];
-  for (const [k, v] of read.entries()) {
-    if (!expected.has(k)) extras.push({k, v});
-  }
-
-  const ok = (missing.length === 0 && diff.length === 0);
-  return { ok, missing, diff, extras };
+/** ===== “Open in Chrome” without long QR ===== **/
+function canonicalUrlForChrome() {
+  // Si params sont en hash (#...), on les bascule en query (?...) pour l’intent
+  const params = getParams().toString();
+  const base = location.origin + location.pathname;
+  return params ? (base + "?" + params) : base;
+}
+function makeIntentUrlChrome(httpsUrl) {
+  // https://host/path?query  -> intent://host/path?query#Intent;scheme=https;package=com.android.chrome;end
+  const u = new URL(httpsUrl);
+  const hostPathQuery = u.host + u.pathname + (u.search || "");
+  return `intent://${hostPathQuery}#Intent;scheme=https;package=com.android.chrome;end`;
 }
 
 /** ===== UI ===== **/
-function refresh(){
+function setWriteBtnState(state) {
+  const b = $("writeBtn");
+  b.classList.remove("good","bad");
+  if (state === "ok") b.classList.add("good");
+  if (state === "err") b.classList.add("bad");
+}
+
+function refresh() {
   const diag = [];
-  diag.push(`HTTPS (secureContext): ${window.isSecureContext}`);
+  diag.push(`HTTPS: ${window.isSecureContext}`);
   diag.push(`NDEFReader présent: ${"NDEFReader" in window}`);
-  diag.push(`Top-level: ${window.top === window}`);
   diag.push(`UA: ${navigator.userAgent}`);
   $("diag").textContent = diag.join("\n");
 
+  // Expected config
   try {
-    const expected = buildCfgFromHarmony();
-    $("expected").textContent = expected;
-    $("status").innerHTML = "<span class='muted'>Prêt. ÉCRIRE pour configurer, ou LIRE pour vérifier.</span>";
+    $("expected").textContent = buildCfgFromHarmony();
+    $("status").innerHTML = "<span class='muted'>Prêt. ÉCRIRE ou LIRE.</span>";
   } catch (e) {
     $("expected").textContent = "(erreur)";
-    $("status").innerHTML = "<span class='ko'>Erreur: </span>" + esc(e.message || e);
+    $("status").innerHTML = "<span class='ko'>Erreur:</span> " + esc(e.message || e);
+  }
+
+  // Gate for wrong browser
+  if (!webNfcAvailable()) {
+    $("gate").style.display = "";
+    $("main").style.display = "none";
+
+    const canon = canonicalUrlForChrome();
+    $("openChromeLink").href = makeIntentUrlChrome(canon);
+    $("gateHint").innerHTML =
+      "Lien court OK sur étiquette. Si ça s’ouvre dans le mauvais navigateur, clique ici → <b>Ouvrir dans Chrome</b>.<br>" +
+      "Sinon, copie le lien et colle-le dans Chrome.";
+  } else {
+    $("gate").style.display = "none";
+    $("main").style.display = "";
   }
 }
 
+$("copyLinkBtn").addEventListener("click", async () => {
+  const url = canonicalUrlForChrome();
+  try {
+    await navigator.clipboard.writeText(url);
+    $("gateHint").innerHTML = "<span class='ok'>✅ Lien copié.</span> Ouvre Chrome et colle-le dans la barre d’adresse.";
+  } catch {
+    $("gateHint").innerHTML = "<span class='ko'>Impossible de copier automatiquement.</span> Copie manuellement l’URL :<br><code>" + esc(url) + "</code>";
+  }
+});
+
 $("writeBtn").addEventListener("click", async () => {
   $("status").textContent = "";
+  setWriteBtnState(null);
+
   try {
-    const expected = buildCfgFromHarmony();
+    const cfg = buildCfgFromHarmony();
     $("status").innerHTML = "<span class='muted'>Approche la sonde… (écriture NFC)</span>";
-    await writeNfcText(expected);
-    $("status").innerHTML = "<span class='ok'>OK : config écrite.</span> Redémarre la sonde pour lancer le JOIN.";
+    await writeNfcText(cfg);
+
+    setWriteBtnState("ok");
+    $("writeBtn").textContent = "✅ ÉCRIT DANS LA SONDE";
+    $("status").innerHTML = "<span class='ok'>OK : la config a bien été écrite.</span> Redémarre la sonde pour lancer le JOIN.";
   } catch (e) {
-    $("status").innerHTML = "<span class='ko'>Erreur: </span>" + esc(e.message || e);
+    setWriteBtnState("err");
+    $("status").innerHTML = "<span class='ko'>Erreur :</span> " + esc(e.message || e);
   }
 });
 
 $("readBtn").addEventListener("click", async () => {
   $("status").textContent = "";
-  $("compareOut").textContent = "";
+  $("readOut").textContent = "(lecture en cours...)";
+
   try {
-    const expected = buildCfgFromHarmony();
-    $("status").innerHTML = "<span class='muted'>Approche la sonde… (lecture NFC)</span>";
-    const readText = await readNfcOnce();
-    $("readOut").textContent = readText;
-
-    const res = compareConfigs(expected, readText);
-    if (res.ok) {
-      $("compareOut").innerHTML = "<span class='ok'>✅ OK : les paramètres essentiels correspondent.</span>";
-    } else {
-      let html = "<span class='ko'>⚠️ NOK : différences détectées.</span><br>";
-      if (res.missing.length) html += "<b>Clés manquantes :</b> " + res.missing.map(esc).join(", ") + "<br>";
-      if (res.diff.length) {
-        html += "<b>Valeurs différentes :</b><br><ul>";
-        for (const d of res.diff) {
-          html += `<li><code>${esc(d.k)}</code> attendu <code>${esc(d.expected)}</code> / lu <code>${esc(d.got)}</code></li>`;
-        }
-        html += "</ul>";
-      }
-      // Extras: infos en plus sur la sonde, non bloquant
-      if (res.extras.length) {
-        html += "<details><summary>Paramètres en plus sur la sonde (non bloquant)</summary><ul>";
-        for (const x of res.extras) html += `<li><code>${esc(x.k)}</code>: ${esc(x.v)}</li>`;
-        html += "</ul></details>";
-      }
-      $("compareOut").innerHTML = html;
-    }
-
+    $("status").innerHTML = "<span class='muted'>Lecture NFC : approche la sonde et reste immobile 2–3s…</span>";
+    const txt = await readNfcOnce(60000);
+    $("readOut").textContent = normalizeCfg(txt) || "(vide)";
     $("status").innerHTML = "<span class='ok'>Lecture OK.</span>";
   } catch (e) {
-    $("status").innerHTML = "<span class='ko'>Erreur: </span>" + esc(e.message || e);
+    $("readOut").textContent = "(rien lu)";
+    $("status").innerHTML = "<span class='ko'>Erreur lecture :</span> " + esc(e.message || e);
   }
 });
 
 window.addEventListener("hashchange", refresh);
+window.addEventListener("popstate", refresh);
 refresh();
 </script>
 </body>
