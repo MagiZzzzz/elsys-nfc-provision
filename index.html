@@ -3,125 +3,350 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Provision Elsys NFC</title>
+  <title>Elsys NFC Provision</title>
   <meta name="theme-color" content="#111111">
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:22px;max-width:760px}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:22px;max-width:980px}
+    .muted{opacity:.75}
     .card{border:1px solid #e6e6e6;border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 1px 10px rgba(0,0,0,.04)}
     h1{font-size:22px;margin:0 0 6px}
-    .muted{opacity:.75}
-    button{font-size:18px;padding:14px 14px;border-radius:12px;border:0;cursor:pointer;width:100%}
+    h2{margin:0 0 10px;font-size:18px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:900px){ .row{grid-template-columns:1fr} }
+    button{font-size:16px;padding:12px 14px;border-radius:12px;border:0;cursor:pointer;width:100%}
     button.primary{background:#111;color:#fff}
     button.secondary{background:#f2f2f2}
     button:disabled{opacity:.5;cursor:not-allowed}
-    pre, textarea{
-      width:100%; box-sizing:border-box; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    pre, textarea, input, select{
+      width:100%; box-sizing:border-box;
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       border:1px solid #ddd; border-radius:12px; padding:10px; background:#fafafa;
     }
+    input, select { font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:#fff; }
     textarea{min-height:140px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    @media (max-width:700px){ .row{grid-template-columns:1fr} }
     .ok{color:#0a7a20;font-weight:700}
     .ko{color:#b00020;font-weight:700}
-    .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#f2f2f2;font-size:13px;margin-left:6px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{padding:8px 12px;border-radius:999px;border:1px solid #ddd;cursor:pointer;background:#fff}
+    .tab.active{background:#111;color:#fff;border-color:#111}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    @media (max-width:900px){ .grid3{grid-template-columns:1fr} }
     .small{font-size:13px}
+    .key{font-family:ui-monospace,monospace}
+    table{width:100%;border-collapse:collapse}
+    td,th{border-bottom:1px solid #eee;padding:8px;text-align:left;vertical-align:top}
   </style>
 </head>
 
 <body>
-  <h1>Provision Elsys NFC <span class="pill">Android + Chrome</span></h1>
-  <div class="muted">Scan QR → bouton “ÉCRIRE” → tap la sonde (NFC) → redémarre la sonde → elle tente de JOIN.</div>
+  <h1>Elsys NFC Provision (Web NFC)</h1>
+  <div class="muted">
+    Fonctionne sans app uniquement sur <b>Android + Chrome</b> (HTTPS obligatoire). Web NFC = écriture NDEF.  
+  </div>
 
-  <div class="card">
-    <div class="small muted">
-      🔒 Astuce sécurité : on met la config dans le <b>#fragment</b> de l’URL (pas envoyé au serveur).  
-      Exemple : <code>#Ota:1|AppEui:...|AppKey:...</code>
-    </div>
+  <div class="card small">
+    🔒 Les données après <b>#</b> dans l’URL ne sont pas envoyées au serveur (fragment).  
+    Tu peux donc mettre <span class="key">AppKey</span>/<span class="key">AppEui</span> dans le QR sans backend.
   </div>
 
   <div class="card">
-    <h2 style="margin:0 0 8px;font-size:18px;">Config à écrire (déduite du QR / URL)</h2>
-    <pre id="cfgPreview">(vide)</pre>
+    <div class="tabs">
+      <div class="tab active" id="tabScan">Mode Scan (QR → Écrire)</div>
+      <div class="tab" id="tabBuild">Mode Formulaire (comme Sensor Settings)</div>
+      <div class="tab" id="tabRaw">Mode Brut (Key:Value)</div>
+    </div>
+  </div>
+
+  <!-- MODE SCAN -->
+  <div class="card" id="paneScan">
+    <h2>Mode Scan</h2>
+    <div class="muted small">La config est lue depuis l’URL (fragment #...).</div>
+    <h3 style="margin:10px 0 8px;font-size:15px;">Config à écrire</h3>
+    <pre id="cfgPreview">(aucune config dans l’URL)</pre>
 
     <div class="row" style="margin-top:10px;">
       <button class="primary" id="writeBtn">ÉCRIRE DANS LA SONDE (NFC)</button>
-      <button class="secondary" id="readBtn">LIRE LA SONDE (NFC) pour vérifier</button>
+      <button class="secondary" id="readBtn">LIRE LA SONDE (NFC)</button>
     </div>
-
     <p id="status" class="small" style="margin:10px 0 0;"></p>
+
+    <div id="readTableWrap" style="display:none;margin-top:10px;">
+      <h3 style="margin:10px 0 8px;font-size:15px;">Contenu lu (décomposé)</h3>
+      <table id="readTable">
+        <thead><tr><th>Key</th><th>Value</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
-  <div class="card">
-    <h2 style="margin:0 0 8px;font-size:18px;">Générateur de lien (pour faire tes QR)</h2>
-    <div class="muted small">Colle ta config <b>Key:Value</b> (une ligne par paramètre), puis copie le lien à mettre dans ton QR.</div>
-    <textarea id="editor" spellcheck="false" placeholder="Ota:1&#10;Ack:0&#10;AppEui:1122334455667788&#10;AppKey:001122...&#10;SplPer:60&#10;TempPer:1&#10;SendPer:10&#10;Port:5"></textarea>
+  <!-- MODE BUILDER -->
+  <div class="card" id="paneBuild" style="display:none;">
+    <h2>Mode Formulaire</h2>
+    <div class="muted small">
+      Ce mode génère les lignes <span class="key">Key:Value</span> supportées par les docs Elsys (NFC spec + settings parameter).
+    </div>
+
+    <div class="card" style="background:#fcfcfc;border-color:#eee;">
+      <h3 style="margin:0 0 10px;font-size:15px;">Réseau</h3>
+      <div class="row">
+        <div>
+          <label>Mode activation</label>
+          <select id="f_mode">
+            <option value="OTAA">OTAA</option>
+            <option value="ABP">ABP</option>
+          </select>
+        </div>
+        <div>
+          <label>Ack (Confirmed uplinks)</label>
+          <select id="f_ack">
+            <option value="">(ne pas écrire)</option>
+            <option value="0">0 (Off)</option>
+            <option value="1">1 (On)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>JoinEUI / AppEui (OTAA)</label>
+          <input id="f_appeui" placeholder="1122334455667788 (16 hex)" />
+        </div>
+        <div>
+          <label>AppKey (OTAA)</label>
+          <input id="f_appkey" placeholder="001122... (32 hex)" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>DevAddr (ABP)</label>
+          <input id="f_devaddr" placeholder="FE000000 (8 hex)" />
+        </div>
+        <div>
+          <label>AppSKey (ABP)</label>
+          <input id="f_appskey" placeholder="32 hex" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>NwkSKey (ABP)</label>
+          <input id="f_nwkskey" placeholder="32 hex" />
+        </div>
+        <div>
+          <label>Port</label>
+          <input id="f_port" type="number" min="1" max="254" placeholder="5" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="background:#fcfcfc;border-color:#eee;">
+      <h3 style="margin:0 0 10px;font-size:15px;">Radio</h3>
+      <div class="row">
+        <div>
+          <label>Plan</label>
+          <input id="f_plan" type="number" placeholder="(ex: EU868 selon capteur)" />
+        </div>
+        <div>
+          <label>Subband</label>
+          <input id="f_subband" type="number" placeholder="0..7 (hybrid)" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>DrDef</label>
+          <input id="f_drdef" placeholder="DR0..DR?" />
+        </div>
+        <div>
+          <label>DrMin</label>
+          <input id="f_drmin" placeholder="DR0..DR?" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>DrMax</label>
+          <input id="f_drmax" placeholder="DR0..DR?" />
+        </div>
+        <div class="muted small" style="align-self:end;">
+          Astuce : si DrMin=DrDef=DrMax, le réseau ne pourra pas changer le DR.
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="background:#fcfcfc;border-color:#eee;">
+      <h3 style="margin:0 0 10px;font-size:15px;">Périodes (base = SplPer)</h3>
+      <div class="row">
+        <div>
+          <label>SplPer (secondes)</label>
+          <input id="f_splper" type="number" min="1" placeholder="60" />
+        </div>
+        <div>
+          <label>SendPer (multiplicateur)</label>
+          <input id="f_sendper" type="number" min="1" placeholder="10 (=> 10×SplPer)" />
+        </div>
+      </div>
+      <div class="grid3" style="margin-top:10px;">
+        <div><label>TempPer</label><input id="f_tempper" type="number" min="1" placeholder="1" /></div>
+        <div><label>LightPer</label><input id="f_lightper" type="number" min="0" placeholder="" /></div>
+        <div><label>PirPer</label><input id="f_pirper" type="number" min="0" placeholder="" /></div>
+      </div>
+      <div class="grid3" style="margin-top:10px;">
+        <div><label>AccPer</label><input id="f_accper" type="number" min="0" placeholder="" /></div>
+        <div><label>VddPer</label><input id="f_vddper" type="number" min="0" placeholder="" /></div>
+        <div><label>Co2Per</label><input id="f_co2per" type="number" min="0" placeholder="" /></div>
+      </div>
+      <div class="grid3" style="margin-top:10px;">
+        <div><label>ExtPer</label><input id="f_extper" type="number" min="0" placeholder="" /></div>
+        <div><label>SoundPer</label><input id="f_soundper" type="number" min="0" placeholder="" /></div>
+        <div><label>RhPer (legacy)</label><input id="f_rhper" type="number" min="0" placeholder="" /></div>
+      </div>
+    </div>
+
+    <div class="card" style="background:#fcfcfc;border-color:#eee;">
+      <h3 style="margin:0 0 10px;font-size:15px;">PIR / CO2 / Externe</h3>
+      <div class="grid3">
+        <div>
+          <label>PirCfg</label>
+          <input id="f_pircfg" type="number" placeholder="0..6 selon modèle" />
+        </div>
+        <div>
+          <label>PirSens</label>
+          <input id="f_pirsens" type="number" placeholder="0..2" />
+        </div>
+        <div>
+          <label>Co2Cfg</label>
+          <input id="f_co2cfg" type="number" placeholder="1 = calibrer (air frais)" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>ExtCfg</label>
+          <input id="f_extcfg" type="number" placeholder="0..25 (selon doc)" />
+        </div>
+        <div>
+          <label>ExtPwrTime (ms)</label>
+          <input id="f_extpwr" type="number" min="0" placeholder="" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>TriggTime (ms)</label>
+          <input id="f_triggtime" type="number" min="0" placeholder="" />
+        </div>
+        <div class="muted small" style="align-self:end;">
+          Les options PIR/Ext dépendent du modèle (ERS/ELT/EMS…).
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="background:#fcfcfc;border-color:#eee;">
+      <h3 style="margin:0 0 10px;font-size:15px;">Queue / Sécurité / Avancé</h3>
+      <div class="grid3">
+        <div><label>Qsize (0..10)</label><input id="f_qsize" type="number" min="0" max="10" placeholder="" /></div>
+        <div><label>Qoffset (0/1)</label><input id="f_qoffset" type="number" min="0" max="1" placeholder="" /></div>
+        <div><label>Qpurge (0/1)</label><input id="f_qpurge" type="number" min="0" max="1" placeholder="" /></div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>Lock (0 = unlocked)</label>
+          <input id="f_lock" type="number" placeholder="1234" />
+        </div>
+        <div>
+          <label>AccCfg (hex 4 bytes)</label>
+          <input id="f_acccfg" placeholder="00000000" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>Link (hex 4 bytes)</label>
+          <input id="f_link" placeholder="00000000" />
+        </div>
+        <div>
+          <label>PerOvr (hex 4 bytes)</label>
+          <input id="f_perovr" placeholder="00000000" />
+        </div>
+      </div>
+    </div>
 
     <div class="row" style="margin-top:10px;">
-      <button class="secondary" id="makeLinkBtn">METTRE LA CONFIG DANS L’URL (#...)</button>
-      <button class="secondary" id="copyLinkBtn">COPIER LE LIEN</button>
+      <button class="secondary" id="buildToUrlBtn">GÉNÉRER LA CONFIG → METTRE DANS L’URL (#...)</button>
+      <button class="secondary" id="copyUrlBtn">COPIER L’URL (pour faire le QR)</button>
     </div>
-    <pre id="linkOut" style="margin-top:10px;"></pre>
 
-    <div class="small muted" style="margin-top:8px;">
-      📌 Rappel Elsys : <b>SendPer × SplPer</b> = intervalle d’envoi ; <b>TempPer × SplPer</b> = intervalle de mesure. :contentReference[oaicite:5]{index=5}
+    <pre id="buildOut" style="margin-top:10px;"></pre>
+  </div>
+
+  <!-- MODE RAW -->
+  <div class="card" id="paneRaw" style="display:none;">
+    <h2>Mode Brut</h2>
+    <div class="muted small">Colle directement des lignes <span class="key">Key:Value</span> (toutes les clés supportées par Elsys fonctionneront).</div>
+    <textarea id="rawEditor" spellcheck="false" placeholder="Ota:1&#10;Ack:0&#10;AppEui:1122334455667788&#10;AppKey:001122..."></textarea>
+    <div class="row" style="margin-top:10px;">
+      <button class="secondary" id="rawToUrlBtn">METTRE DANS L’URL (#...)</button>
+      <button class="secondary" id="rawCopyUrlBtn">COPIER L’URL</button>
     </div>
+    <pre id="rawOut" style="margin-top:10px;"></pre>
   </div>
 
 <script>
-  // --- Helpers ---
   const $ = (id) => document.getElementById(id);
   const statusEl = $("status");
   const cfgPreview = $("cfgPreview");
-  const editor = $("editor");
-  const linkOut = $("linkOut");
 
-  function setStatus(html) { statusEl.innerHTML = html; }
   function esc(s){ return s.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+  function setStatus(html) { statusEl.innerHTML = html; }
 
   function parseCfgFromHash() {
     const h = (location.hash || "").replace(/^#/, "");
     if (!h) return "";
     const decoded = decodeURIComponent(h);
-    // allow either '|' or '\n' in hash
-    const cfg = decoded.includes("|") ? decoded.split("|").join("\n") : decoded;
-    return cfg.trim();
+    return (decoded.includes("|") ? decoded.split("|").join("\n") : decoded).trim();
   }
-
+  function normalizeCfg(text) {
+    return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).join("\n");
+  }
   function cfgToHash(cfgText) {
-    // normalize: remove empty lines, keep "Key:Value" lines
-    const lines = cfgText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const lines = normalizeCfg(cfgText).split("\n");
     return encodeURIComponent(lines.join("|"));
   }
-
   function currentLinkWithHash(hashValue) {
     const base = location.origin + location.pathname;
     return base + "#" + hashValue;
   }
 
-  function refreshUI() {
+  function refreshPreview() {
     const cfg = parseCfgFromHash();
     cfgPreview.textContent = cfg || "(aucune config dans l’URL)";
-    editor.value = cfg || editor.value;
-    linkOut.textContent = cfg ? currentLinkWithHash(cfgToHash(cfg)) : "";
   }
 
-  // --- Web NFC checks ---
-  const hasWebNfc = ("NDEFWriter" in window) && ("NDEFReader" in window);
+  // Tabs
+  function setTab(which) {
+    const tabs = {Scan:["tabScan","paneScan"], Build:["tabBuild","paneBuild"], Raw:["tabRaw","paneRaw"]};
+    for (const k of Object.keys(tabs)) {
+      const [t,p] = tabs[k];
+      $(t).classList.toggle("active", k===which);
+      $(p).style.display = (k===which) ? "" : "none";
+    }
+  }
+  $("tabScan").onclick = () => setTab("Scan");
+  $("tabBuild").onclick = () => setTab("Build");
+  $("tabRaw").onclick = () => setTab("Raw");
 
+  // Web NFC
+  const hasWebNfc = ("NDEFWriter" in window) && ("NDEFReader" in window);
   function requireWebNfcOrExplain() {
     if (!hasWebNfc) {
-      setStatus('<span class="ko">Web NFC non supporté ici.</span> Utilise <b>Android + Chrome</b> et un site en HTTPS.');
+      setStatus('<span class="ko">Web NFC non supporté.</span> Utilise Android + Chrome et un site en HTTPS.');
       return false;
     }
     return true;
   }
-
   async function writeCfgToNfc(cfg) {
     const writer = new NDEFWriter();
-    // Write a single Text record containing the full Key:Value config
     await writer.write({ records: [{ recordType: "text", data: cfg, lang: "en" }] });
   }
-
   async function readOnceFromNfc(timeoutMs=15000) {
     const reader = new NDEFReader();
     const ac = new AbortController();
@@ -133,103 +358,184 @@
         reader.onreading = (event) => {
           try {
             const recs = event.message.records || [];
-            // Try to decode first text record
             for (const r of recs) {
               if (r.recordType === "text") {
                 const txt = new TextDecoder(r.encoding || "utf-8").decode(r.data);
-                clearTimeout(t);
-                ac.abort();
-                resolve(txt);
-                return;
+                clearTimeout(t); ac.abort(); resolve(txt); return;
               }
             }
-            clearTimeout(t);
-            ac.abort();
+            clearTimeout(t); ac.abort();
             resolve("(Pas de record texte trouvé)");
           } catch (e) {
-            clearTimeout(t);
-            ac.abort();
-            reject(e);
+            clearTimeout(t); ac.abort(); reject(e);
           }
         };
-
         await reader.scan({ signal: ac.signal });
       } catch (e) {
-        clearTimeout(t);
-        reject(e);
+        clearTimeout(t); reject(e);
       }
     });
   }
 
-  // --- Buttons ---
-  $("writeBtn").addEventListener("click", async () => {
+  // Scan pane buttons
+  $("writeBtn").onclick = async () => {
     setStatus("");
     if (!requireWebNfcOrExplain()) return;
-
     const cfg = parseCfgFromHash();
-    if (!cfg) {
-      setStatus('<span class="ko">Aucune config dans l’URL.</span> Colle une config dans le générateur puis clique “METTRE LA CONFIG DANS L’URL”.');
-      return;
-    }
-
+    if (!cfg) { setStatus('<span class="ko">Aucune config dans l’URL.</span>'); return; }
     try {
-      setStatus('Approche la sonde… (écriture NFC en cours)');
+      setStatus("Approche la sonde… (écriture NFC)");
       await writeCfgToNfc(cfg);
-      setStatus('<span class="ok">OK : config écrite.</span> Redémarre la sonde (pile/aimant selon modèle) pour déclencher le JOIN.');
+      setStatus('<span class="ok">OK : config écrite.</span> Le capteur peut redémarrer après changement (≈ 5s).');
     } catch (e) {
       setStatus('<span class="ko">Erreur écriture NFC :</span> ' + esc(e.message || String(e)));
     }
-  });
+  };
 
-  $("readBtn").addEventListener("click", async () => {
+  function fillReadTable(text) {
+    const wrap = $("readTableWrap");
+    const tbody = $("readTable").querySelector("tbody");
+    tbody.innerHTML = "";
+    const lines = normalizeCfg(text).split("\n").filter(Boolean);
+    for (const line of lines) {
+      const idx = line.indexOf(":");
+      const k = idx>=0 ? line.slice(0, idx).trim() : line.trim();
+      const v = idx>=0 ? line.slice(idx+1).trim() : "";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td class="key">${esc(k)}</td><td>${esc(v)}</td>`;
+      tbody.appendChild(tr);
+    }
+    wrap.style.display = "";
+  }
+
+  $("readBtn").onclick = async () => {
     setStatus("");
     if (!requireWebNfcOrExplain()) return;
-
     try {
-      setStatus('Approche la sonde… (lecture NFC)');
+      setStatus("Approche la sonde… (lecture NFC)");
       const txt = await readOnceFromNfc();
-      setStatus('<span class="ok">Lecture OK.</span> Contenu reçu affiché ci-dessous.');
+      setStatus('<span class="ok">Lecture OK.</span>');
       cfgPreview.textContent = txt;
+      fillReadTable(txt);
     } catch (e) {
       setStatus('<span class="ko">Erreur lecture NFC :</span> ' + esc(e.message || String(e)));
     }
-  });
+  };
 
-  $("makeLinkBtn").addEventListener("click", () => {
-    const hash = cfgToHash(editor.value);
-    location.hash = hash;
-    refreshUI();
-    setStatus('<span class="ok">OK.</span> Ton URL est prête → copie-la et mets-la dans le QR.');
-  });
-
-  $("copyLinkBtn").addEventListener("click", async () => {
-    const cfg = editor.value.trim();
-    if (!cfg) return;
-    const url = currentLinkWithHash(cfgToHash(cfg));
-    try {
-      await navigator.clipboard.writeText(url);
-      setStatus('<span class="ok">Lien copié.</span>');
-    } catch {
-      setStatus('<span class="ko">Impossible de copier automatiquement.</span> Sélectionne le lien dans la zone ci-dessous.');
-    }
-    linkOut.textContent = url;
-  });
-
-  // Service worker (offline after first open)
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js").catch(() => {});
-    });
+  // Builder -> config lines
+  function addLine(lines, key, val) {
+    if (val === null || val === undefined) return;
+    const s = String(val).trim();
+    if (!s) return;
+    lines.push(`${key}:${s}`);
   }
 
-  // Init
-  refreshUI();
+  function buildConfigFromForm() {
+    const lines = [];
+    const mode = $("f_mode").value;
 
-  // Disable buttons if Web NFC missing
+    // Mode
+    addLine(lines, "Ota", mode === "OTAA" ? "1" : "0");
+    addLine(lines, "Ack", $("f_ack").value);
+
+    if (mode === "OTAA") {
+      addLine(lines, "AppEui", $("f_appeui").value);
+      addLine(lines, "AppKey", $("f_appkey").value);
+    } else {
+      addLine(lines, "DevAddr", $("f_devaddr").value);
+      addLine(lines, "AppSKey", $("f_appskey").value);
+      addLine(lines, "NwkSKey", $("f_nwkskey").value);
+    }
+
+    addLine(lines, "Port", $("f_port").value);
+
+    // Radio
+    addLine(lines, "Plan", $("f_plan").value);
+    addLine(lines, "Subband", $("f_subband").value);
+    addLine(lines, "DrDef", $("f_drdef").value);
+    addLine(lines, "DrMin", $("f_drmin").value);
+    addLine(lines, "DrMax", $("f_drmax").value);
+
+    // Periods
+    addLine(lines, "SplPer", $("f_splper").value);
+    addLine(lines, "SendPer", $("f_sendper").value);
+    addLine(lines, "TempPer", $("f_tempper").value);
+    addLine(lines, "LightPer", $("f_lightper").value);
+    addLine(lines, "PirPer", $("f_pirper").value);
+    addLine(lines, "AccPer", $("f_accper").value);
+    addLine(lines, "VddPer", $("f_vddper").value);
+    addLine(lines, "Co2Per", $("f_co2per").value);
+    addLine(lines, "ExtPer", $("f_extper").value);
+    addLine(lines, "SoundPer", $("f_soundper").value);
+    addLine(lines, "RhPer", $("f_rhper").value);
+
+    // PIR/Ext/CO2
+    addLine(lines, "PirCfg", $("f_pircfg").value);
+    addLine(lines, "PirSens", $("f_pirsens").value);
+    addLine(lines, "Co2Cfg", $("f_co2cfg").value);
+    addLine(lines, "ExtCfg", $("f_extcfg").value);
+    addLine(lines, "ExtPwrTime", $("f_extpwr").value);
+    addLine(lines, "TriggTime", $("f_triggtime").value);
+
+    // Queue / security / advanced
+    addLine(lines, "Qsize", $("f_qsize").value);
+    addLine(lines, "Qoffset", $("f_qoffset").value);
+    addLine(lines, "Qpurge", $("f_qpurge").value);
+    addLine(lines, "Lock", $("f_lock").value);
+    addLine(lines, "AccCfg", $("f_acccfg").value);
+    addLine(lines, "Link", $("f_link").value);
+    addLine(lines, "PerOvr", $("f_perovr").value);
+
+    return lines.join("\n");
+  }
+
+  $("buildToUrlBtn").onclick = () => {
+    const cfg = buildConfigFromForm();
+    $("buildOut").textContent = cfg || "(vide)";
+    const url = currentLinkWithHash(cfgToHash(cfg));
+    location.hash = cfgToHash(cfg);
+    refreshPreview();
+    setStatus('<span class="ok">Config générée.</span> Tu peux maintenant retourner en “Mode Scan” et écrire en NFC.');
+  };
+
+  $("copyUrlBtn").onclick = async () => {
+    const cfg = buildConfigFromForm();
+    $("buildOut").textContent = cfg || "(vide)";
+    const url = currentLinkWithHash(cfgToHash(cfg));
+    try { await navigator.clipboard.writeText(url); }
+    catch {}
+    $("buildOut").textContent = url;
+    setStatus('<span class="ok">URL prête pour QR.</span>');
+  };
+
+  // Raw mode
+  $("rawToUrlBtn").onclick = () => {
+    const cfg = normalizeCfg($("rawEditor").value);
+    const url = currentLinkWithHash(cfgToHash(cfg));
+    location.hash = cfgToHash(cfg);
+    $("rawOut").textContent = url;
+    refreshPreview();
+    setStatus('<span class="ok">OK.</span>');
+  };
+  $("rawCopyUrlBtn").onclick = async () => {
+    const cfg = normalizeCfg($("rawEditor").value);
+    const url = currentLinkWithHash(cfgToHash(cfg));
+    try { await navigator.clipboard.writeText(url); } catch {}
+    $("rawOut").textContent = url;
+    setStatus('<span class="ok">URL copiée.</span>');
+  };
+
+  // Init
+  refreshPreview();
   if (!hasWebNfc) {
     $("writeBtn").disabled = true;
     $("readBtn").disabled = true;
-    setStatus('<span class="ko">Web NFC non supporté ici.</span> Utilise <b>Android + Chrome</b>.');
+    setStatus('<span class="ko">Web NFC non supporté.</span> Android + Chrome uniquement.');
+  }
+
+  // Service worker (offline after first open)
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(()=>{}));
   }
 </script>
 </body>
