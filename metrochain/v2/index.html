@@ -22,7 +22,11 @@
  const v12texts=await Promise.all(v12files.map(async f=>{const r=await fetch(f,{cache:"force-cache"});if(!r.ok)throw new Error(`v12 ${f} : HTTP ${r.status}`);return r.text()}));
  const v12b64=v12texts.map(readExport).join("");if(v12b64.length!==15744)throw new Error(`Correctif v12 incomplet (${v12b64.length}/15744)`);
  html=applyOps(html,JSON.parse(decodeGzip(v12b64)));
- if(!html||!html.includes("MétroChain")||!html.includes("movement_timeline")||!html.includes("buildTimelinePhases")||!html.includes("Départ prévu")||!html.includes("service_state")||!html.includes("metrochain-signal-v12")||!html.includes("mc-network")||!html.includes("journey-stop-details"))throw new Error("Application v12 incomplète");
+ const v13files=["v13-patch0.js","v13-patch1.js"].map(f=>`https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/a75d3e53df06b6d20b711ab833eb5788807589b0/metrochain/v2/bundles/${f}`);
+ const v13texts=await Promise.all(v13files.map(async f=>{const r=await fetch(f,{cache:"force-cache"});if(!r.ok)throw new Error(`v13 ${f} : HTTP ${r.status}`);return r.text()}));
+ const v13b64=v13texts.map(readExport).join("");if(v13b64.length!==10312)throw new Error(`Correctif v13 incomplet (${v13b64.length}/10312)`);
+ html=applyOps(html,JSON.parse(decodeGzip(v13b64)));
+ if(!html||!html.includes("MétroChain")||!html.includes("movement_timeline")||!html.includes("buildTimelinePhases")||!html.includes("Départ prévu")||!html.includes("service_state")||!html.includes("metrochain-signal-v12")||!html.includes("mc-network")||!html.includes("journey-stop-details")||!html.includes("metrochain-motion-v13")||!html.includes("mc13-motion-stage"))throw new Error("Application v13 incomplète");
  document.open();document.write(html);document.close();
 }catch(e){console.error(e);document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><small>'+String(e&&e.message?e.message:e)+'</small><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:1px solid #17283e;border-radius:10px;background:#fff;font-weight:700">Réessayer</button></div></div>'}})();
 </script></body></html>
