@@ -1,0 +1,150 @@
+/* MetroChain v18 — global product design system.
+   Deliberately does not style #liveMetroMap descendants or train canvases. */
+:root{
+  --mc-bg:#eef2f6;
+  --mc-surface:#ffffff;
+  --mc-surface-2:#f7f9fb;
+  --mc-ink:#112338;
+  --mc-muted:#6d7d90;
+  --mc-border:#dbe3ec;
+  --mc-dark:#0d1826;
+  --mc-dark-2:#14263b;
+  --mc-accent:#47d7a5;
+  --mc-accent-2:#8b95ff;
+  --mc-warn:#f2a33a;
+  --mc-shadow:0 22px 60px rgba(13,31,52,.10),0 4px 14px rgba(13,31,52,.05);
+  --mc-shadow-hover:0 28px 76px rgba(13,31,52,.15),0 8px 22px rgba(13,31,52,.07);
+  --mc-radius-xl:26px;
+  --mc-radius-lg:20px;
+  --mc-radius-md:14px;
+  --mc-ease:cubic-bezier(.16,1,.3,1);
+}
+html,body{background:var(--mc-bg)!important;color:var(--mc-ink)!important}
+body{overflow-x:hidden!important}
+body.mc18-ready{background:var(--mc-bg)!important}
+.app{position:relative!important;isolation:isolate!important;min-height:100vh!important;background:transparent!important}
+.mc18-bg{position:fixed;inset:0;z-index:-3;pointer-events:none;overflow:hidden;background:linear-gradient(180deg,#edf2f6 0%,#f5f7fa 55%,#eaf0f5 100%)}
+.mc18-bg:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(17,35,56,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(17,35,56,.035) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.72),transparent 70%)}
+.mc18-orb{position:absolute;width:520px;height:520px;border-radius:50%;filter:blur(90px);opacity:.18;transform:translate3d(var(--tx,0),var(--ty,0),0);transition:transform .6s var(--mc-ease)}
+.mc18-orb.a{left:-180px;top:-180px;background:#47d7a5}
+.mc18-orb.b{right:-210px;top:80px;background:#8b95ff}
+.mc18-orb.c{left:34%;bottom:-330px;background:#70b8ff;opacity:.12}
+
+/* Top navigation */
+.main-nav{position:sticky!important;top:0!important;z-index:4000!important;display:flex!important;align-items:center!important;gap:7px!important;margin:0!important;padding:12px 18px!important;background:rgba(13,24,38,.94)!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.08)!important;box-shadow:0 10px 32px rgba(13,24,38,.16)!important;backdrop-filter:blur(18px) saturate(1.1)!important}
+.main-nav:before{content:"MÉTROCHAIN";display:flex;align-items:center;height:38px;margin-right:10px;padding:0 14px 0 3px;color:#fff;font-size:13px;font-weight:950;letter-spacing:.16em;border-right:1px solid rgba(255,255,255,.12)}
+.main-nav:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent 0,#47d7a5 18%,#8b95ff 52%,transparent 100%);opacity:.55;transform-origin:left;animation:mc18NavScan 5.8s ease-in-out infinite}
+.nav-btn{position:relative!important;height:38px!important;padding:0 13px!important;border:1px solid transparent!important;border-radius:11px!important;background:transparent!important;color:#aebed0!important;box-shadow:none!important;font-size:12px!important;font-weight:820!important;letter-spacing:.01em!important;transition:color .2s ease,background .2s ease,border-color .2s ease,transform .2s var(--mc-ease)!important}
+.nav-btn:hover{color:#fff!important;background:rgba(255,255,255,.07)!important;border-color:rgba(255,255,255,.08)!important;transform:translateY(-1px)!important}
+.nav-btn.active{color:#fff!important;background:rgba(71,215,165,.11)!important;border-color:rgba(71,215,165,.22)!important;box-shadow:inset 0 -2px 0 #47d7a5!important}
+@keyframes mc18NavScan{0%,100%{transform:scaleX(.18);opacity:.18}50%{transform:scaleX(.9);opacity:.65}}
+
+/* Main page canvas */
+main{position:relative!important;max-width:1480px!important;margin:0 auto!important;padding:28px 26px 56px!important;box-sizing:border-box!important}
+main.hidden{display:none!important}
+main.mc18-page-in{animation:mc18PageIn .72s var(--mc-ease) both}
+main.mc18-page-in>.mc18-animate,main.mc18-page-in>section,main.mc18-page-in>.card,main.mc18-page-in>.panel{animation:mc18SectionIn .72s var(--mc-ease) both;animation-delay:calc(var(--mc-i,0) * 55ms)}
+@keyframes mc18PageIn{0%{opacity:.25;transform:translateY(22px) scale(.985);filter:blur(7px)}60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:none;filter:none}}
+@keyframes mc18SectionIn{0%{opacity:0;transform:translateY(26px) scale(.985)}100%{opacity:1;transform:none}}
+
+/* Typography + reusable surfaces */
+main:not(#liveMap) h1,main:not(#liveMap) h2,main:not(#liveMap) h3{color:var(--mc-ink)!important;letter-spacing:-.035em!important}
+main:not(#liveMap) h1{font-size:clamp(34px,4vw,58px)!important;line-height:.98!important;margin:0 0 14px!important}
+main:not(#liveMap) h2{font-size:clamp(24px,2.4vw,34px)!important}
+main:not(#liveMap) p{color:var(--mc-muted)!important;line-height:1.6!important}
+main:not(#liveMap) .eyebrow{color:#75869a!important;font-size:10px!important;font-weight:900!important;letter-spacing:.16em!important;text-transform:uppercase!important}
+main:not(#liveMap) section,main:not(#liveMap) .card,main:not(#liveMap) .panel,main:not(#liveMap) [class*="-card"]{border-color:var(--mc-border)!important;box-shadow:var(--mc-shadow)!important}
+main:not(#liveMap) section,main:not(#liveMap) .panel{border-radius:var(--mc-radius-xl)!important}
+main:not(#liveMap) .card,main:not(#liveMap) [class*="-card"]{border-radius:var(--mc-radius-lg)!important}
+main:not(#liveMap) button{font-family:inherit!important;transition:transform .2s var(--mc-ease),box-shadow .2s ease,background .2s ease,border-color .2s ease,filter .2s ease!important}
+main:not(#liveMap) button:hover{transform:translateY(-2px)!important;filter:saturate(1.04)!important}
+main:not(#liveMap) button:active{transform:translateY(0) scale(.98)!important}
+main:not(#liveMap) input,main:not(#liveMap) select,main:not(#liveMap) textarea{border-radius:12px!important;border:1px solid #ced8e3!important;background:#fff!important;color:var(--mc-ink)!important;box-shadow:inset 0 1px 0 rgba(17,35,56,.025)!important;transition:border-color .2s ease,box-shadow .2s ease!important}
+main:not(#liveMap) input:focus,main:not(#liveMap) select:focus,main:not(#liveMap) textarea:focus{outline:none!important;border-color:#899aae!important;box-shadow:0 0 0 4px rgba(57,84,113,.08)!important}
+
+/* Generic premium hover surface, excluding map */
+.mc18-tilt{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateZ(0);transform-style:preserve-3d;transition:transform .28s var(--mc-ease),box-shadow .28s ease!important;will-change:transform}
+.mc18-tilt:hover{box-shadow:var(--mc-shadow-hover)!important}
+
+/* Games / home */
+#home{padding-top:34px!important}
+#home:before{content:"";display:block;position:absolute;left:26px;right:26px;top:28px;height:250px;border-radius:30px;background:linear-gradient(120deg,#0e1b2a 0%,#152a42 58%,#1c3c59 100%);box-shadow:0 28px 75px rgba(13,24,38,.18);z-index:-1}
+#home>section:first-of-type,#home>.hero:first-of-type{position:relative!important;min-height:200px!important;padding:34px 36px!important;background:transparent!important;border:0!important;box-shadow:none!important;color:#fff!important}
+#home>section:first-of-type h1,#home>section:first-of-type h2,#home>.hero h1,#home>.hero h2{color:#fff!important}
+#home>section:first-of-type p,#home>.hero p{color:#b9c8d7!important;max-width:760px!important}
+#home .mode-grid,#home .games-grid,#home [class*="grid"]{gap:16px!important}
+#home .mode-card,#home .game-card,#home [class*="mode-card"]{position:relative!important;overflow:hidden!important;background:rgba(255,255,255,.96)!important;border:1px solid #dbe3ec!important;min-height:150px!important}
+#home .mode-card:before,#home .game-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(#47d7a5,#8b95ff);opacity:.8}
+#home .mode-card:hover,#home .game-card:hover{transform:translateY(-6px)!important;box-shadow:var(--mc-shadow-hover)!important}
+
+/* Crosswords */
+#crosswordsScreen{padding-top:34px!important}
+#crosswordsScreen section,#crosswordsScreen .panel{background:#fff!important;border:1px solid var(--mc-border)!important}
+#crosswordsScreen table,#crosswordsScreen .crossword-grid{filter:drop-shadow(0 16px 28px rgba(13,31,52,.08))}
+#crosswordsScreen input{font-weight:850!important;text-align:center!important}
+
+/* Progress */
+#progressScreen{padding-top:34px!important}
+#progressScreen .progress-card,#progressScreen [class*="progress-card"],#progressScreen section{background:#fff!important;border:1px solid var(--mc-border)!important}
+#progressScreen [class*="progress-bar"],#progressScreen progress{overflow:hidden!important;border-radius:999px!important}
+#progressScreen [class*="progress-bar"]>*{transition:width .9s var(--mc-ease)!important}
+
+/* Community */
+#communityScreen{padding-top:34px!important}
+#communityScreen section,#communityScreen .panel,#communityScreen [class*="card"]{background:#fff!important;border:1px solid var(--mc-border)!important}
+#communityScreen [class*="card"]:hover{transform:translateY(-5px)!important;box-shadow:var(--mc-shadow-hover)!important}
+
+/* Leaderboards */
+#leaderboardScreen{padding-top:34px!important}
+#leaderboardScreen section,#leaderboardScreen .panel{background:#fff!important;border:1px solid var(--mc-border)!important;overflow:hidden!important}
+#leaderboardScreen table{width:100%!important;border-collapse:separate!important;border-spacing:0!important}
+#leaderboardScreen th{background:#f4f7fa!important;color:#708195!important;font-size:10px!important;letter-spacing:.12em!important;text-transform:uppercase!important}
+#leaderboardScreen th,#leaderboardScreen td{padding:13px 14px!important;border-bottom:1px solid #e8edf2!important}
+#leaderboardScreen tr{transition:background .18s ease,transform .18s ease!important}
+#leaderboardScreen tbody tr:hover{background:#f8fafc!important}
+
+/* Game screens */
+#game,#special{padding-top:34px!important}
+#game section,#special section,#game .panel,#special .panel,#game .card,#special .card{background:#fff!important;border:1px solid var(--mc-border)!important}
+
+/* Carte live — wrapper only. DO NOT TOUCH #liveMetroMap descendants. */
+#liveMap{max-width:1480px!important;padding:28px 26px 56px!important;background:transparent!important}
+#liveMap .live-map-shell{border:1px solid #d7e0e9!important;border-radius:26px!important;background:#f8fafc!important;box-shadow:0 26px 74px rgba(13,31,52,.12)!important;overflow:hidden!important}
+#liveMap .live-map-head{min-height:146px!important;padding:26px 30px!important;background:linear-gradient(128deg,#0c1928 0%,#14283f 58%,#18354f 100%)!important}
+#liveMap .live-map-head h2{font-size:30px!important}
+#liveMap .journey-box{padding:20px 24px!important;background:#fff!important}
+#liveMap .traffic-strip{background:#fbfcfd!important}
+#liveMap .live-toolbar,#liveMap .live-line-stats{background:#f6f8fb!important}
+#liveMap .live-map-wrap{padding:14px!important;background:#e9eff5!important}
+#liveMap .live-map-head,#liveMap .journey-box,#liveMap .traffic-strip,#liveMap .live-toolbar,#liveMap .live-line-stats,#liveMap .live-map-wrap{will-change:transform,opacity}
+#liveMap.mc18-page-in .live-map-head{animation:mc18LiveHead .76s var(--mc-ease) both}
+#liveMap.mc18-page-in .journey-box{animation:mc18LivePanel .68s var(--mc-ease) .08s both}
+#liveMap.mc18-page-in .traffic-strip{animation:mc18LivePanel .68s var(--mc-ease) .14s both}
+#liveMap.mc18-page-in .live-toolbar{animation:mc18LivePanel .68s var(--mc-ease) .20s both}
+#liveMap.mc18-page-in .live-line-stats{animation:mc18LivePanel .68s var(--mc-ease) .26s both}
+#liveMap.mc18-page-in .live-map-wrap{animation:mc18LiveMapShell .82s var(--mc-ease) .18s both}
+@keyframes mc18LiveHead{0%{opacity:0;transform:translateY(-34px) scale(.985)}100%{opacity:1;transform:none}}
+@keyframes mc18LivePanel{0%{opacity:0;transform:translateY(18px)}100%{opacity:1;transform:none}}
+@keyframes mc18LiveMapShell{0%{opacity:.18;transform:translateY(32px) scale(.975)}100%{opacity:1;transform:none}}
+
+/* Functional live indicators only */
+#liveMap .live-status.live i{animation:mc18LivePulse 1.8s ease-out infinite!important}
+#liveMap .traffic-dot{animation:mc18TrafficPulse 2.4s ease-out infinite!important}
+@keyframes mc18LivePulse{0%{box-shadow:0 0 0 0 rgba(71,215,165,.52)}80%,100%{box-shadow:0 0 0 10px rgba(71,215,165,0)}}
+@keyframes mc18TrafficPulse{0%{box-shadow:0 0 0 0 rgba(242,163,58,.38)}80%,100%{box-shadow:0 0 0 9px rgba(242,163,58,0)}}
+
+/* Explicitly preserve the live-map rendering engine */
+#liveMetroMap,#liveMetroMap *{animation-name:revert!important}
+#liveMetroMap canvas,#liveMetroMap .metro-train-canvas{filter:revert!important;transition:revert!important}
+
+/* Small screens */
+@media(max-width:900px){
+  .main-nav{overflow-x:auto!important;scrollbar-width:none!important;padding:10px 12px!important}.main-nav::-webkit-scrollbar{display:none!important}.main-nav:before{display:none!important}
+  main,#liveMap{padding:18px 14px 38px!important}
+  #home:before{left:14px;right:14px;top:18px;height:235px}
+  #liveMap .live-map-head{grid-template-columns:1fr!important;padding:22px!important}
+  #liveMap .journey-box{grid-template-columns:1fr!important}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}

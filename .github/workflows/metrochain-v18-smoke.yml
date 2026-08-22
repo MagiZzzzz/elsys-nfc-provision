@@ -1,0 +1,75 @@
+name: MetroChain v18 visual smoke
+
+on:
+  pull_request:
+    branches: [metrochain-hosting]
+    paths:
+      - 'metrochain/v18/**'
+      - '.github/workflows/metrochain-v18-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Serve repository
+        run: python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/mc18-http.log 2>&1 &
+      - name: Validate design system and navigation
+        run: |
+          cat > mc18-smoke.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import fs from 'fs';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:1440,height:1000},deviceScaleFactor:1});
+          const errors=[]; page.on('pageerror',e=>errors.push(String(e?.stack||e)));
+          await page.goto('http://127.0.0.1:8000/metrochain/v18/index.html?ci='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+          await page.waitForFunction(()=>{const f=document.querySelector('#appFrame');try{return !!(f?.contentWindow?.__MC18_THEME__&&f.contentDocument.querySelector('.app'))}catch{return false}},null,{timeout:60000});
+          const frame=page.frames().find(f=>/\/metrochain\/v2\/index\.html/.test(f.url()));
+          if(!frame) throw new Error('MetroChain child frame not found');
+          await frame.evaluate(()=>{window.__mc18hb=0;window.__mc18timer=setInterval(()=>window.__mc18hb++,25)});
+          const mapBaseline=await frame.evaluate(()=>({canvases:document.querySelectorAll('#liveMetroMap canvas').length,trains:document.querySelectorAll('#liveMetroMap .metro-train-canvas').length,mc18Inside:document.querySelectorAll('#liveMetroMap [class*="mc18"],#liveMetroMap [id*="mc18"]').length}));
+          console.log('MAP_BASELINE '+JSON.stringify(mapBaseline));
+          if(mapBaseline.canvases<1) throw new Error('Live map canvases missing');
+          if(mapBaseline.mc18Inside!==0) throw new Error('v18 injected DOM inside #liveMetroMap');
+          const nav=frame.locator('.nav-btn:visible');
+          const count=await nav.count();
+          fs.mkdirSync('mc18-shots',{recursive:true});
+          for(let i=0;i<count;i++){
+            const btn=nav.nth(i); const label=(await btn.textContent()).trim();
+            const before=await frame.evaluate(()=>window.__mc18hb);
+            await btn.click({timeout:5000}); await page.waitForTimeout(850);
+            const state=await frame.evaluate(()=>({hb:window.__mc18hb,visible:[...document.querySelectorAll('main')].filter(m=>!m.classList.contains('hidden')&&getComputedStyle(m).display!=='none').map(m=>m.id),theme:window.__MC18_THEME__,mapCanvases:document.querySelectorAll('#liveMetroMap canvas').length,mc18InsideMap:document.querySelectorAll('#liveMetroMap [class*="mc18"],#liveMetroMap [id*="mc18"]').length}));
+            console.log('PAGE '+JSON.stringify({label,delta:state.hb-before,...state}));
+            if(state.hb-before<10) throw new Error('Event loop stalled on '+label);
+            if(state.visible.length!==1) throw new Error('Invalid visible mains on '+label+': '+JSON.stringify(state.visible));
+            if(state.mc18InsideMap!==0) throw new Error('v18 DOM leaked inside live map on '+label);
+            const safe=label.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+            await page.screenshot({path:`mc18-shots/${String(i+1).padStart(2,'0')}-${safe||'page'}.png`,fullPage:false});
+          }
+          const finalMap=await frame.evaluate(()=>({canvases:document.querySelectorAll('#liveMetroMap canvas').length,trains:document.querySelectorAll('#liveMetroMap .metro-train-canvas').length,errors:window.__MC_ERRORS__||[]}));
+          console.log('MAP_FINAL '+JSON.stringify(finalMap));
+          console.log('PAGE_ERRORS '+JSON.stringify(errors));
+          if(finalMap.canvases<mapBaseline.canvases) throw new Error('Live map canvas count regressed');
+          if(errors.length) throw new Error('Page errors: '+errors.join(' | '));
+          await browser.close();
+          EOF
+          node mc18-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: metrochain-v18-screenshots
+          path: mc18-shots
+          if-no-files-found: ignore
