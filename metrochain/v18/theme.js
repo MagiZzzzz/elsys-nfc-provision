@@ -11,8 +11,6 @@
   bg.innerHTML='<i class="mc18-orb a"></i><i class="mc18-orb b"></i><i class="mc18-orb c"></i>';
   body.prepend(bg);
 
-  // Remove any v18 CSS rule that would target the internal Leaflet/train engine.
-  // The v18 theme is allowed to style only the map wrapper and the controls around it.
   setTimeout(()=>{
     try{
       const sheet=d.getElementById('mc18-theme')?.sheet;
@@ -34,16 +32,13 @@
     const shell=main.firstElementChild;
     if(shell) shell.classList.add('mc18-screen-shell');
     const heading=main.querySelector('h1,h2');
-    if(heading){
-      let node=heading.parentElement,best=null;
-      const mw=Math.max(main.getBoundingClientRect().width,1);
-      while(node&&node!==main){
-        const r=node.getBoundingClientRect();
-        if(r.width>mw*.72&&r.height>70&&r.height<290) best=node;
-        if(node===shell) break;
+    if(heading&&shell){
+      let node=heading;
+      while(node.parentElement&&node.parentElement!==shell&&node.parentElement!==main){
         node=node.parentElement;
       }
-      if(best) best.classList.add('mc18-screen-hero');
+      if(node&&node!==shell&&node!==main) node.classList.add('mc18-screen-hero');
+      else if(heading.parentElement) heading.parentElement.classList.add('mc18-screen-hero');
     }
   }
 
