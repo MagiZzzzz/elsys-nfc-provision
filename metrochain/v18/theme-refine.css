@@ -1,0 +1,64 @@
+/* v18 visual refinement after Chromium screenshot review */
+
+/* The app already has its own brand at left: keep one brand only. */
+.main-nav{background:transparent!important;box-shadow:none!important;border-bottom:0!important;backdrop-filter:none!important;padding-left:6px!important;padding-right:6px!important}
+.main-nav:before{display:none!important;content:none!important}
+.main-nav:after{left:8px!important;right:8px!important;bottom:2px!important;opacity:.32!important}
+
+/* Unified shell for data/community screens. */
+.mc18-screen-shell{position:relative!important;overflow:hidden!important;background:#fff!important;border:1px solid #d8e1ea!important;border-radius:26px!important;box-shadow:0 26px 72px rgba(13,31,52,.11)!important}
+.mc18-screen-shell:after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(circle at 92% 92%,rgba(139,149,255,.055),transparent 25%),linear-gradient(rgba(17,35,56,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(17,35,56,.018) 1px,transparent 1px);background-size:auto,42px 42px,42px 42px;mask-image:linear-gradient(to bottom,transparent 12%,#000 55%)}
+.mc18-screen-shell>*{position:relative;z-index:1}
+
+/* Replace the legacy pink gradient with the same premium transit header everywhere. */
+.mc18-screen-hero{position:relative!important;margin:0!important;padding:26px 28px!important;background:linear-gradient(126deg,#0d1928 0%,#14283f 58%,#193852 100%)!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.07)!important;border-radius:0!important;box-shadow:none!important;color:#fff!important;overflow:hidden!important}
+.mc18-screen-hero:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#47d7a5;box-shadow:0 0 22px rgba(71,215,165,.35)}
+.mc18-screen-hero:after{content:"";position:absolute;width:420px;height:420px;border-radius:50%;right:-190px;top:-280px;background:radial-gradient(circle,rgba(139,149,255,.22),rgba(139,149,255,0) 68%);pointer-events:none}
+.mc18-screen-hero h1,.mc18-screen-hero h2,.mc18-screen-hero h3{position:relative;z-index:1;color:#fff!important;margin-top:4px!important;margin-bottom:6px!important}
+.mc18-screen-hero p{position:relative;z-index:1;color:#aebfd0!important;margin-top:0!important;margin-bottom:0!important}
+.mc18-screen-hero .eyebrow,.mc18-screen-hero [class*="eyebrow"]{color:#8fa4b9!important}
+.mc18-screen-hero button{position:relative;z-index:2;background:rgba(255,255,255,.07)!important;color:#eef6ff!important;border:1px solid rgba(255,255,255,.16)!important;box-shadow:none!important}
+.mc18-screen-hero button:hover{background:rgba(255,255,255,.13)!important;border-color:rgba(255,255,255,.25)!important}
+
+/* Give otherwise empty states a deliberate, product-like canvas. */
+#progressScreen .mc18-screen-shell,#communityScreen .mc18-screen-shell,#leaderboardScreen .mc18-screen-shell,#crosswordsScreen .mc18-screen-shell{min-height:650px!important}
+#progressScreen .mc18-screen-shell>div:not(.mc18-screen-hero),#communityScreen .mc18-screen-shell>div:not(.mc18-screen-hero),#leaderboardScreen .mc18-screen-shell>div:not(.mc18-screen-hero),#crosswordsScreen .mc18-screen-shell>div:not(.mc18-screen-hero){background:transparent!important}
+
+/* Progression */
+#progressScreen [class*="stat"],#progressScreen [class*="metric"]{background:rgba(255,255,255,.94)!important;border:1px solid #dce4ec!important;box-shadow:0 12px 30px rgba(13,31,52,.07)!important}
+#progressScreen [class*="stat"] b,#progressScreen [class*="metric"] b{color:#12283f!important;font-size:22px!important}
+#progressScreen .mc18-screen-shell{background:linear-gradient(180deg,#fff 0%,#f8fafc 100%)!important}
+
+/* Community */
+#communityScreen .mc18-screen-shell{background:radial-gradient(circle at 50% 64%,rgba(71,215,165,.07),transparent 24%),linear-gradient(180deg,#fff 0%,#f8fafc 100%)!important}
+#communityScreen button{border-radius:12px!important}
+
+/* Crosswords */
+#crosswordsScreen .mc18-screen-shell{background:linear-gradient(180deg,#fff 0%,#f8fafc 100%)!important}
+#crosswordsScreen .mc18-screen-shell [class*="list"],#crosswordsScreen .mc18-screen-shell aside{background:rgba(248,250,252,.92)!important;border-color:#dce4ec!important}
+#crosswordsScreen .mc18-screen-shell li,#crosswordsScreen .mc18-screen-shell [class*="item"]{transition:background .18s ease,transform .18s ease,border-color .18s ease!important}
+#crosswordsScreen .mc18-screen-shell li:hover,#crosswordsScreen .mc18-screen-shell [class*="item"]:hover{background:#f0f5f8!important;transform:translateX(3px)!important}
+
+/* Leaderboard */
+#leaderboardScreen .mc18-screen-shell{background:linear-gradient(180deg,#fff 0%,#f8fafc 100%)!important}
+#leaderboardScreen table,#leaderboardScreen [class*="leaderboard"]{background:transparent!important}
+#leaderboardScreen tbody tr:first-child{background:linear-gradient(90deg,rgba(255,195,58,.10),transparent 42%)!important}
+#leaderboardScreen tbody tr:first-child td:first-child{box-shadow:inset 3px 0 0 #f2b33f!important}
+#leaderboardScreen tbody tr{transition:background .18s ease,transform .18s ease!important}
+#leaderboardScreen tbody tr:hover{background:#f1f6f9!important;transform:translateX(2px)!important}
+
+/* Games refinement */
+#home .mode-card,#home .game-card,#home [class*="mode-card"]{background:rgba(255,255,255,.985)!important}
+#home .mode-card h3,#home .mode-card h4,#home .game-card h3,#home .game-card h4,#home [class*="mode-card"] h3,#home [class*="mode-card"] h4{color:#12283f!important;font-weight:900!important}
+#home .mode-card p,#home .game-card p,#home [class*="mode-card"] p{color:#687b92!important}
+
+/* Strong page-enter choreography for the unified hero. */
+main.mc18-page-in .mc18-screen-hero{animation:mc18HeroDrop .78s cubic-bezier(.16,1,.3,1) both!important}
+main.mc18-page-in .mc18-screen-shell>*:not(.mc18-screen-hero){animation:mc18ContentRise .72s cubic-bezier(.16,1,.3,1) .10s both!important}
+@keyframes mc18HeroDrop{0%{opacity:0;transform:translateY(-28px);filter:blur(8px)}60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:none;filter:none}}
+@keyframes mc18ContentRise{0%{opacity:0;transform:translateY(24px)}100%{opacity:1;transform:none}}
+
+@media(max-width:900px){
+  .mc18-screen-hero{padding:22px 20px!important}
+  #progressScreen .mc18-screen-shell,#communityScreen .mc18-screen-shell,#leaderboardScreen .mc18-screen-shell,#crosswordsScreen .mc18-screen-shell{min-height:560px!important}
+}
