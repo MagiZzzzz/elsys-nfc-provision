@@ -9,8 +9,7 @@
  const splitKeep=s=>s.match(/[^\n]*\n|[^\n]+$/g)||[];
  const applyOps=(html,ops)=>{const lines=splitKeep(html);for(const [from,to,text] of [...ops].sort((a,b)=>b[0]-a[0]))lines.splice(from,to-from,...splitKeep(text));return lines.join("")};
  const texts=await Promise.all(files.map(async f=>{const r=await fetch(BASE+f,{cache:"force-cache"});if(!r.ok)throw new Error(`${f} : HTTP ${r.status}`);return r.text()}));
- const base64=texts.map(readExport).join("");
- if(base64.length!==71452)throw new Error(`Bundle de base incomplet (${base64.length}/71452)`);
+ const base64=texts.map(readExport).join("");if(base64.length!==71452)throw new Error(`Bundle de base incomplet (${base64.length}/71452)`);
  let html=decodeGzip(base64);
  async function patch(url,expected,label,cache="force-cache"){const r=await fetch(url,{cache});if(!r.ok)throw new Error(`${label} : HTTP ${r.status}`);const b64=readExport(await r.text());if(b64.length!==expected)throw new Error(`${label} incomplet (${b64.length}/${expected})`);return JSON.parse(decodeGzip(b64))}
  const v8texts=await Promise.all(["./bundles/v8-patch0.js?v=20260822h","./bundles/v8-patch1.js?v=20260822h"].map(async f=>{const r=await fetch(f,{cache:"reload"});if(!r.ok)throw new Error(`${f} : HTTP ${r.status}`);return r.text()}));
@@ -20,13 +19,21 @@
  html=applyOps(html,await patch("https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/5a95b83aecfb17af4a1c911ba8ee894e071e6258/metrochain/v2/bundles/v11-patch0.js",4848,"Correctif v11"));
  const v12files=["v12x-patch0.js","v12x-patch1.js","v12x-patch2.js","v12x-patch3a.js","v12x-patch3b.js","v12x-patch4.js","v12x-patch5.js"].map(f=>`https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/5c7ef5e166a34d2fb41683c4720bf58f7d8abc8f/metrochain/v2/bundles/${f}`);
  const v12texts=await Promise.all(v12files.map(async f=>{const r=await fetch(f,{cache:"force-cache"});if(!r.ok)throw new Error(`v12 ${f} : HTTP ${r.status}`);return r.text()}));
- const v12b64=v12texts.map(readExport).join("");if(v12b64.length!==15744)throw new Error(`Correctif v12 incomplet (${v12b64.length}/15744)`);
- html=applyOps(html,JSON.parse(decodeGzip(v12b64)));
+ const v12b64=v12texts.map(readExport).join("");if(v12b64.length!==15744)throw new Error(`Correctif v12 incomplet (${v12b64.length}/15744)`);html=applyOps(html,JSON.parse(decodeGzip(v12b64)));
  const v13files=["v13f-patch0.js","v13f-patch1.js"].map(f=>`https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/ab063b0c37e86a03b07707daa109aacf10f35da0/metrochain/v2/bundles/${f}`);
  const v13texts=await Promise.all(v13files.map(async f=>{const r=await fetch(f,{cache:"force-cache"});if(!r.ok)throw new Error(`v13 fixe ${f} : HTTP ${r.status}`);return r.text()}));
- const v13b64=v13texts.map(readExport).join("");if(v13b64.length!==10388)throw new Error(`Correctif v13 fixe incomplet (${v13b64.length}/10388)`);
- html=applyOps(html,JSON.parse(decodeGzip(v13b64)));
- if(!html||!html.includes("MétroChain")||!html.includes("movement_timeline")||!html.includes("buildTimelinePhases")||!html.includes("Départ prévu")||!html.includes("service_state")||!html.includes("metrochain-signal-v12")||!html.includes("mc-network")||!html.includes("journey-stop-details")||!html.includes("metrochain-motion-v13")||!html.includes("mc13-motion-stage")||html.includes("const cursorLoop")||html.includes("observe(body,{subtree:true"))throw new Error("Application v13 fixe incomplète ou non optimisée");
+ const v13b64=v13texts.map(readExport).join("");if(v13b64.length!==10388)throw new Error(`Correctif v13 fixe incomplet (${v13b64.length}/10388)`);html=applyOps(html,JSON.parse(decodeGzip(v13b64)));
+
+ // v14 stability pass: keep the visual redesign but remove permanent high-cost GPU/CPU work.
+ html=html.replace("if(!coarse&&!reduce){","if(false&&!coarse&&!reduce){");
+ html=html.replace("if(!reduce)raf=requestAnimationFrame(drawCanvas);","if(false&&!reduce)raf=requestAnimationFrame(drawCanvas);");
+ const perf=`<style id="metrochain-perf-v14">
+ #mc13-motion-stage,#mc13-cursor{display:none!important}
+ body:not(.metro-live-active) .mode-card,body:not(.metro-live-active) .line-card,body:not(.metro-live-active) .data-card,body:not(.metro-live-active) .game-card,body:not(.metro-live-active) .question-card{will-change:auto!important}
+ body:not(.metro-live-active) .hero-main:after,body:not(.metro-live-active) .section-head:after,body:not(.metro-live-active) .data-head:before,body:not(.metro-live-active) .game-card:before,body:not(.metro-live-active) .question-card:after,body:not(.metro-live-active) .progress-mini-bar i:after{animation:none!important}
+ </style><script id="metrochain-perf-runtime-v14">(()=>{const FRAME=32;const mapVisible=()=>!document.getElementById('liveMap')?.classList.contains('hidden');if(typeof animateActualTrains==='function'){const base=animateActualTrains;let last=-Infinity;animateActualTrains=function(ts){if(!mapVisible()){liveAnimationId=null;return}const now=typeof ts==='number'?ts:performance.now();if(now-last<FRAME){liveAnimationId=requestAnimationFrame(animateActualTrains);return}last=now;return base()}}if(typeof animateSimulatedTrains==='function'){const base=animateSimulatedTrains;let last=-Infinity;animateSimulatedTrains=function(ts){if(!mapVisible()){liveAnimationId=null;return}const now=typeof ts==='number'?ts:performance.now();if(now-last<FRAME){liveAnimationId=requestAnimationFrame(animateSimulatedTrains);return}last=now;return base()}}})();<\/script>`;
+ html=html.replace("</body>",perf+"</body>");
+ if(!html||!html.includes("MétroChain")||!html.includes("movement_timeline")||!html.includes("buildTimelinePhases")||!html.includes("Départ prévu")||!html.includes("service_state")||!html.includes("metrochain-signal-v12")||!html.includes("mc-network")||!html.includes("journey-stop-details")||!html.includes("metrochain-motion-v13")||!html.includes("mc13-motion-stage")||!html.includes("metrochain-perf-v14")||html.includes("const cursorLoop")||html.includes("observe(body,{subtree:true")||html.includes("if(!reduce)raf=requestAnimationFrame(drawCanvas);"))throw new Error("Application v14 stabilité incomplète");
  document.open();document.write(html);document.close();
 }catch(e){console.error(e);document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><small>'+String(e&&e.message?e.message:e)+'</small><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:1px solid #17283e;border-radius:10px;background:#fff;font-weight:700">Réessayer</button></div></div>'}})();
 </script></body></html>
