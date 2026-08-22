@@ -17,10 +17,15 @@
  html=applyOps(html,await patch("https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/326a100d752f7d1b2b17391a05ec5b7bb823e0a3/metrochain/v2/bundles/v9-patch0.js",3552,"Correctif v9"));
  html=applyOps(html,await patch("https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/c22aa74bbb745071d0133b4ceea97f0edddcda5b/metrochain/v2/bundles/v10-patch0.js",1660,"Correctif v10"));
  html=applyOps(html,await patch("https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/5a95b83aecfb17af4a1c911ba8ee894e071e6258/metrochain/v2/bundles/v11-patch0.js",4848,"Correctif v11"));
- // v17 baseline: stop at v11. No v12/v13 observers, no redesign runtime, no permanent animation layer.
- const diagnostic=`<script id="metrochain-v17-diagnostics">(()=>{window.__MC_BUILD__='v17-baseline';window.__MC_ERRORS__=[];addEventListener('error',e=>window.__MC_ERRORS__.push(String(e.error||e.message||'error')));addEventListener('unhandledrejection',e=>window.__MC_ERRORS__.push(String(e.reason||'rejection')));})();<\/script>`;
+ // v17.1 baseline: stop at v11 and restore the missing local network progress helper.
+ if(!html.includes("function networkPct(")){
+   const anchor="function allUniqueMastered(){";
+   if(!html.includes(anchor))throw new Error("Point d'injection networkPct introuvable");
+   html=html.replace(anchor,"function networkPct(){const total=totalLineStops(),mastered=ORDER.reduce((n,l)=>n+masteredFor(l).size,0);return total?Math.round(mastered/total*100):0}\n"+anchor);
+ }
+ const diagnostic=`<script id="metrochain-v17-diagnostics">(()=>{window.__MC_BUILD__='v17.1-networkpct';window.__MC_ERRORS__=[];addEventListener('error',e=>window.__MC_ERRORS__.push(String(e.error||e.message||'error')));addEventListener('unhandledrejection',e=>window.__MC_ERRORS__.push(String(e.reason||'rejection')));})();<\/script>`;
  html=html.replace("</body>",diagnostic+"</body>");
- if(!html||!html.includes("MétroChain")||!html.includes("main-nav")||!html.includes("nav-btn")||html.includes("metrochain-signal-v12")||html.includes("metrochain-motion-v13")||html.includes("mc13-motion-stage"))throw new Error("Application v17 baseline incomplète");
+ if(!html||!html.includes("MétroChain")||!html.includes("main-nav")||!html.includes("nav-btn")||!html.includes("function networkPct(")||html.includes("metrochain-signal-v12")||html.includes("metrochain-motion-v13")||html.includes("mc13-motion-stage"))throw new Error("Application v17.1 incomplète");
  document.open();document.write(html);document.close();
 }catch(e){console.error(e);document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><small>'+String(e&&e.message?e.message:e)+'</small><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:1px solid #17283e;border-radius:10px;background:#fff;font-weight:700">Réessayer</button></div></div>'}})();
 </script></body></html>
