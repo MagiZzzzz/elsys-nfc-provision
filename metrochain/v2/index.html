@@ -1,2 +1,16 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=../index.html?v=2"><title>MetroChain v2</title></head><body>Chargement…</body></html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MétroChain</title><style>html,body{margin:0;height:100%;font-family:system-ui;background:#eaf0ff;color:#17283e}.boot{height:100%;display:grid;place-items:center}.card{background:white;padding:24px 28px;border:1px solid #17283e;border-radius:18px;box-shadow:5px 6px 0 #17283e;text-align:center}.dot{width:10px;height:10px;background:#48d9ad;border-radius:50%;display:inline-block;margin-right:8px;animation:p 1s infinite alternate}@keyframes p{to{opacity:.25}}</style></head><body><div class="boot"><div class="card"><div><span class="dot"></span><b>Chargement de MétroChain…</b></div><small>Carte live, itinéraires et jeux</small></div></div><script type="module">
+import c0 from "./chunks/chunk0.js?v=20260822c";
+import c1 from "./chunks/chunk1.js?v=20260822c";
+import c2 from "./chunks/chunk2.js?v=20260822c";
+import c3 from "./chunks/chunk3.js?v=20260822c";
+import c4 from "./chunks/chunk4.js?v=20260822c";
+import c5 from "./chunks/chunk5.js?v=20260822c";
+const b64=[c0,c1,c2,c3,c4,c5].join("");
+try{
+ const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+ const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+ let html=await new Response(stream).text();
+ document.open();document.write(html);document.close();
+}catch(e){document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><br><small>'+String(e)+'</small></div></div>';console.error(e)}
+</script></body></html>
