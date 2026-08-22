@@ -8,6 +8,9 @@ on:
       - '.github/workflows/metrochain-smoke.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
@@ -25,43 +28,51 @@ jobs:
       - name: Serve repository
         run: |
           python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/metrochain-http.log 2>&1 &
-          echo $! >/tmp/metrochain-http.pid
       - name: Click all top navigation items
         run: |
+          mkdir -p ci-results
           cat > /tmp/metrochain-smoke.mjs <<'EOF'
           import { chromium } from 'playwright';
-          const browser = await chromium.launch({headless:true});
-          const page = await browser.newPage({viewport:{width:1440,height:1000}});
-          const errors=[];
-          page.on('pageerror', e=>errors.push('PAGE: '+String(e)));
-          page.on('console', m=>{ if(m.type()==='error') errors.push('CONSOLE: '+m.text()); });
-          await page.goto('http://127.0.0.1:8000/metrochain/v2/index.html?ci='+Date.now(), {waitUntil:'domcontentloaded',timeout:60000});
-          await page.waitForFunction(()=>document.querySelector('.app') && !document.querySelector('.boot'), null, {timeout:60000});
-          const build=await page.evaluate(()=>({title:document.title,navs:[...document.querySelectorAll('.nav-btn')].map(b=>({text:b.textContent.trim(),target:b.dataset.target||b.dataset.screen||'',onclick:b.getAttribute('onclick')})),mains:[...document.querySelectorAll('main')].map(m=>m.id)}));
-          console.log('BUILD',JSON.stringify(build));
-          if(!build.navs.length) throw new Error('No .nav-btn found');
-          await page.evaluate(()=>{window.__heartbeat=0;window.__hb=setInterval(()=>window.__heartbeat++,25)});
-          const results=[];
-          for(let i=0;i<build.navs.length;i++){
-            const btn=page.locator('.nav-btn').nth(i);
-            const label=(await btn.textContent()).trim();
-            const before=await page.evaluate(()=>window.__heartbeat);
-            let clickError='';
-            try{await btn.click({timeout:3500});}catch(e){clickError=String(e)}
-            await page.waitForTimeout(250);
-            const state=await page.evaluate(()=>({hb:window.__heartbeat,visible:[...document.querySelectorAll('main')].filter(m=>!m.classList.contains('hidden')).map(m=>m.id),active:[...document.querySelectorAll('.nav-btn.active')].map(b=>b.textContent.trim()),body:document.body.className}));
-            results.push({label,before,after:state.hb,delta:state.hb-before,clickError,...state});
-            if(clickError) throw new Error(`Click failed on ${label}: ${clickError}`);
-            if(state.hb-before < 3) throw new Error(`Event loop stalled after ${label}; heartbeat delta=${state.hb-before}`);
-            if(state.visible.length!==1) throw new Error(`Expected exactly one visible main after ${label}, got ${JSON.stringify(state.visible)}`);
-          }
-          console.log('RESULTS',JSON.stringify(results));
-          console.log('ERRORS',JSON.stringify(errors));
-          if(errors.length) throw new Error('Browser errors: '+errors.join(' | '));
-          await page.screenshot({path:'metrochain-smoke.png',fullPage:true});
-          await browser.close();
+          import fs from 'node:fs';
+          const result={sha:process.env.GITHUB_SHA,passed:false,build:null,clicks:[],errors:[],failure:null,finished_at:null};
+          let browser;
+          try{
+            browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1440,height:1000}});
+            page.on('pageerror', e=>result.errors.push('PAGE: '+String(e)));
+            page.on('console', m=>{if(m.type()==='error')result.errors.push('CONSOLE: '+m.text())});
+            await page.goto('http://127.0.0.1:8000/metrochain/v2/index.html?ci='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+            await page.waitForFunction(()=>document.querySelector('.app')&&!document.querySelector('.boot'),null,{timeout:60000});
+            result.build=await page.evaluate(()=>({title:document.title,marker:window.__MC_BUILD__||window.__MC_V16__||null,navs:[...document.querySelectorAll('.nav-btn')].map(b=>({text:b.textContent.trim(),target:b.dataset.target||b.dataset.screen||'',onclick:b.getAttribute('onclick')})),mains:[...document.querySelectorAll('main')].map(m=>m.id)}));
+            if(!result.build.navs.length)throw new Error('No .nav-btn found');
+            await page.evaluate(()=>{window.__heartbeat=0;window.__hb=setInterval(()=>window.__heartbeat++,25)});
+            for(let i=0;i<result.build.navs.length;i++){
+              const btn=page.locator('.nav-btn').nth(i),label=(await btn.textContent()).trim();
+              const before=await page.evaluate(()=>window.__heartbeat);let clickError='';
+              try{await btn.click({timeout:3500})}catch(e){clickError=String(e)}
+              await page.waitForTimeout(300);
+              const state=await page.evaluate(()=>({hb:window.__heartbeat,visible:[...document.querySelectorAll('main')].filter(m=>!m.classList.contains('hidden')).map(m=>m.id),active:[...document.querySelectorAll('.nav-btn.active')].map(b=>b.textContent.trim()),body:document.body.className}));
+              const click={label,before,after:state.hb,delta:state.hb-before,clickError,...state};result.clicks.push(click);
+              if(clickError)throw new Error(`Click failed on ${label}: ${clickError}`);
+              if(click.delta<4)throw new Error(`Event loop stalled after ${label}; heartbeat delta=${click.delta}`);
+              if(state.visible.length!==1)throw new Error(`Expected one visible main after ${label}, got ${JSON.stringify(state.visible)}`);
+            }
+            if(result.errors.length)throw new Error('Browser errors: '+result.errors.join(' | '));
+            await page.screenshot({path:'metrochain-smoke.png',fullPage:true});
+            result.passed=true;
+          }catch(e){result.failure=String(e&&e.stack?e.stack:e)}
+          finally{if(browser)await browser.close();result.finished_at=new Date().toISOString();fs.writeFileSync('ci-results/metrochain-smoke.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2))}
+          if(!result.passed)process.exit(1);
           EOF
           node /tmp/metrochain-smoke.mjs
+      - name: Publish smoke result
+        if: always()
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add ci-results/metrochain-smoke.json
+          git commit -m "Record MetroChain Chromium smoke result" || exit 0
+          git push
       - uses: actions/upload-artifact@v4
         if: always()
         with:
