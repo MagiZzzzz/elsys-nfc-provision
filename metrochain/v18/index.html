@@ -23,13 +23,13 @@
     const frame=document.getElementById('appFrame'),boot=document.getElementById('boot');
     const apply=()=>{
       try{
-        const w=frame.contentWindow,d=frame.contentDocument;
+        const d=frame.contentDocument;
         if(!d||!d.querySelector('.app')) return false;
         if(!d.getElementById('mc18-theme')){
-          const l=d.createElement('link');l.id='mc18-theme';l.rel='stylesheet';l.href='./theme.css?v=20260823a';d.head.appendChild(l);
+          const l=d.createElement('link');l.id='mc18-theme';l.rel='stylesheet';l.href='../v18/theme.css?v=20260823b';d.head.appendChild(l);
         }
         if(!d.getElementById('mc18-runtime')){
-          const s=d.createElement('script');s.id='mc18-runtime';s.src='./theme.js?v=20260823a';d.body.appendChild(s);
+          const s=d.createElement('script');s.id='mc18-runtime';s.src='../v18/theme.js?v=20260823b';d.body.appendChild(s);
         }
         boot.classList.add('hide');
         return true;
