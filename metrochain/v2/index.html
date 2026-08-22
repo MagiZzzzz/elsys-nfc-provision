@@ -28,7 +28,16 @@
  const v9lines=splitKeep(html);
  for(const [from,to,text] of [...v9ops].sort((a,b)=>b[0]-a[0]))v9lines.splice(from,to-from,...splitKeep(text));
  html=v9lines.join("");
- if(!html||!html.includes("MétroChain")||!html.includes("liveMap")||!html.includes("movement_timeline")||!html.includes("buildTimelinePhases")||!html.includes("position reconstruite"))throw new Error("Application v9 incomplète");
+ const V10="https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/c22aa74bbb745071d0133b4ceea97f0edddcda5b/metrochain/v2/bundles/v10-patch0.js";
+ const v10r=await fetch(V10,{cache:"force-cache"});
+ if(!v10r.ok)throw new Error(`Correctif v10 : HTTP ${v10r.status}`);
+ const v10b64=readExport(await v10r.text());
+ if(v10b64.length!==1660)throw new Error(`Correctif v10 incomplet (${v10b64.length}/1660)`);
+ const v10ops=JSON.parse(decodeGzip(v10b64));
+ const v10lines=splitKeep(html);
+ for(const [from,to,text] of [...v10ops].sort((a,b)=>b[0]-a[0]))v10lines.splice(from,to-from,...splitKeep(text));
+ html=v10lines.join("");
+ if(!html||!html.includes("MétroChain")||!html.includes("movement_timeline")||!html.includes("buildTimelinePhases")||!html.includes("validation des rames fiables")||!html.includes("groups=new Map"))throw new Error("Application v10 incomplète");
  document.open();document.write(html);document.close();
 }catch(e){console.error(e);document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><small>'+String(e&&e.message?e.message:e)+'</small><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:1px solid #17283e;border-radius:10px;background:#fff;font-weight:700">Réessayer</button></div></div>'}})();
 </script></body></html>
