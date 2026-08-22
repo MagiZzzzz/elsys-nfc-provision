@@ -30,7 +30,7 @@ jobs:
           python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/metrochain-http.log 2>&1 &
       - name: Click all top navigation items
         run: |
-          cat > /tmp/metrochain-smoke.mjs <<'EOF'
+          cat > metrochain-smoke.mjs <<'EOF'
           import { chromium } from 'playwright';
           const browser=await chromium.launch({headless:true});
           const page=await browser.newPage({viewport:{width:1440,height:1000}});
@@ -60,7 +60,7 @@ jobs:
           console.log('PASS '+JSON.stringify({build,clicks}));
           await browser.close();
           EOF
-          node /tmp/metrochain-smoke.mjs
+          node ./metrochain-smoke.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
