@@ -26,13 +26,16 @@
         const d=frame.contentDocument;
         if(!d||!d.querySelector('.app')) return false;
         if(!d.getElementById('mc18-theme')){
-          const l=d.createElement('link');l.id='mc18-theme';l.rel='stylesheet';l.href='../v18/theme.css?v=20260823c';d.head.appendChild(l);
+          const l=d.createElement('link');l.id='mc18-theme';l.rel='stylesheet';l.href='../v18/theme.css?v=20260823d';d.head.appendChild(l);
         }
         if(!d.getElementById('mc18-theme-refine')){
-          const l=d.createElement('link');l.id='mc18-theme-refine';l.rel='stylesheet';l.href='../v18/theme-refine.css?v=20260823c';d.head.appendChild(l);
+          const l=d.createElement('link');l.id='mc18-theme-refine';l.rel='stylesheet';l.href='../v18/theme-refine.css?v=20260823d';d.head.appendChild(l);
+        }
+        if(!d.getElementById('mc18-theme-final')){
+          const l=d.createElement('link');l.id='mc18-theme-final';l.rel='stylesheet';l.href='../v18/theme-final.css?v=20260823d';d.head.appendChild(l);
         }
         if(!d.getElementById('mc18-runtime')){
-          const s=d.createElement('script');s.id='mc18-runtime';s.src='../v18/theme.js?v=20260823c';d.body.appendChild(s);
+          const s=d.createElement('script');s.id='mc18-runtime';s.src='../v18/theme.js?v=20260823d';d.body.appendChild(s);
         }
         boot.classList.add('hide');
         return true;
