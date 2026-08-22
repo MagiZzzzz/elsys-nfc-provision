@@ -17,15 +17,51 @@
  html=applyOps(html,await patch("https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/326a100d752f7d1b2b17391a05ec5b7bb823e0a3/metrochain/v2/bundles/v9-patch0.js",3552,"Correctif v9"));
  html=applyOps(html,await patch("https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/c22aa74bbb745071d0133b4ceea97f0edddcda5b/metrochain/v2/bundles/v10-patch0.js",1660,"Correctif v10"));
  html=applyOps(html,await patch("https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/5a95b83aecfb17af4a1c911ba8ee894e071e6258/metrochain/v2/bundles/v11-patch0.js",4848,"Correctif v11"));
- // v17.1 baseline: stop at v11 and restore the missing local network progress helper.
+ // v17.2: stable v11 baseline + local progress fix + cinematic animations scoped to Carte live.
  if(!html.includes("function networkPct(")){
    const anchor="function allUniqueMastered(){";
    if(!html.includes(anchor))throw new Error("Point d'injection networkPct introuvable");
    html=html.replace(anchor,"function networkPct(){const total=totalLineStops(),mastered=ORDER.reduce((n,l)=>n+masteredFor(l).size,0);return total?Math.round(mastered/total*100):0}\n"+anchor);
  }
- const diagnostic=`<script id="metrochain-v17-diagnostics">(()=>{window.__MC_BUILD__='v17.1-networkpct';window.__MC_ERRORS__=[];addEventListener('error',e=>window.__MC_ERRORS__.push(String(e.error||e.message||'error')));addEventListener('unhandledrejection',e=>window.__MC_ERRORS__.push(String(e.reason||'rejection')));})();<\/script>`;
+ const liveCss=`<style id="mc-live-cinematic-v17-2">
+#liveMap{position:relative!important;isolation:isolate;overflow:hidden;--mcx:50%;--mcy:48%}
+#liveMap.mc-live-cinematic{animation:mcLiveStageIn .9s cubic-bezier(.16,1,.3,1) both}
+#liveMap .leaflet-container{position:relative;z-index:1;animation:mcMapReveal 1.15s cubic-bezier(.16,1,.3,1) both;box-shadow:inset 0 0 90px rgba(17,40,62,.22),0 24px 70px rgba(23,40,62,.16)}
+#liveMap.mc-live-cinematic .leaflet-control-container>*{animation:mcPanelDrop .8s cubic-bezier(.16,1,.3,1) .12s both}
+#liveMap.mc-live-cinematic [class*="panel"],#liveMap.mc-live-cinematic [class*="card"]{animation:mcPanelFly .75s cubic-bezier(.16,1,.3,1) .08s both}
+#liveMap .leaflet-marker-icon{animation:mcMarkerGlow 1.65s ease-in-out infinite;will-change:filter,opacity}
+#liveMap .leaflet-interactive{animation:mcLineGlow 3.2s ease-in-out infinite;will-change:filter,opacity}
+#liveMap .mc-live-fx{position:absolute;inset:0;z-index:450;pointer-events:none;overflow:hidden;border-radius:22px}
+#liveMap .mc-live-aura{position:absolute;inset:-18%;background:radial-gradient(circle at var(--mcx) var(--mcy),rgba(72,217,173,.50) 0 8%,rgba(72,217,173,.18) 18%,rgba(98,113,255,.16) 34%,transparent 58%);filter:blur(22px) saturate(1.55);mix-blend-mode:screen;opacity:.82;animation:mcAuraBreath 4.8s ease-in-out infinite alternate}
+#liveMap .mc-live-sweep{position:absolute;left:-28%;top:-38%;width:156%;height:176%;background:conic-gradient(from 20deg at 50% 50%,transparent 0 73%,rgba(72,217,173,.04) 76%,rgba(72,217,173,.48) 80%,rgba(255,255,255,.72) 81.2%,rgba(98,113,255,.28) 82.5%,transparent 86%);mix-blend-mode:screen;filter:blur(2px);opacity:.72;animation:mcRadarSweep 6.5s linear infinite}
+#liveMap .mc-live-scanline{position:absolute;left:-5%;top:-18%;width:110%;height:150px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.05) 35%,rgba(72,217,173,.28) 50%,rgba(255,255,255,.07) 62%,transparent);filter:blur(5px);mix-blend-mode:screen;animation:mcScanline 4.2s cubic-bezier(.45,0,.55,1) infinite}
+#liveMap .mc-live-ring{position:absolute;left:50%;top:53%;width:180px;height:180px;margin:-90px;border:1px solid rgba(72,217,173,.58);border-radius:50%;box-shadow:0 0 30px rgba(72,217,173,.22),inset 0 0 30px rgba(72,217,173,.12);animation:mcRingPulse 3.4s ease-out infinite}
+#liveMap .mc-live-ring.r2{animation-delay:1.12s}#liveMap .mc-live-ring.r3{animation-delay:2.24s}
+#liveMap .mc-live-particles{position:absolute;inset:0;overflow:hidden}
+#liveMap .mc-live-particles i{position:absolute;left:var(--x);bottom:-24px;width:var(--s);height:var(--s);border-radius:50%;background:radial-gradient(circle,#fff 0 12%,rgba(72,217,173,.95) 38%,rgba(72,217,173,0) 72%);filter:drop-shadow(0 0 8px rgba(72,217,173,.85));opacity:0;animation:mcParticleRise var(--t) linear var(--d) infinite}
+#liveMap .mc-live-status-badge{position:absolute;top:18px;left:50%;z-index:1250;transform:translateX(-50%);display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.34);background:rgba(16,28,43,.72);color:#fff;font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 35px rgba(16,28,43,.28),0 0 24px rgba(72,217,173,.24);backdrop-filter:blur(14px);pointer-events:none;animation:mcBadgeIn .8s cubic-bezier(.16,1,.3,1) .22s both,mcBadgeFloat 3.2s ease-in-out 1.2s infinite}
+#liveMap .mc-live-status-badge b{width:9px;height:9px;border-radius:50%;background:#48d9ad;box-shadow:0 0 0 0 rgba(72,217,173,.8);animation:mcBadgePulse 1.35s ease-out infinite}
+@keyframes mcLiveStageIn{0%{opacity:.1;filter:blur(9px) saturate(.7)}45%{opacity:1;filter:blur(0) saturate(1.24)}100%{opacity:1;filter:none}}
+@keyframes mcMapReveal{0%{opacity:.18;filter:brightness(.65) saturate(.5) blur(7px)}55%{opacity:1;filter:brightness(1.12) saturate(1.35) blur(0)}100%{opacity:1;filter:none}}
+@keyframes mcPanelDrop{0%{opacity:0;transform:translateY(-34px) scale(.94)}65%{opacity:1;transform:translateY(4px) scale(1.015)}100%{opacity:1;transform:none}}
+@keyframes mcPanelFly{0%{opacity:0;transform:translateY(34px) scale(.96)}70%{opacity:1;transform:translateY(-3px) scale(1.01)}100%{opacity:1;transform:none}}
+@keyframes mcMarkerGlow{0%,100%{filter:drop-shadow(0 0 2px rgba(255,255,255,.35)) brightness(1)}50%{filter:drop-shadow(0 0 10px rgba(72,217,173,.9)) brightness(1.35)}}
+@keyframes mcLineGlow{0%,100%{filter:drop-shadow(0 0 0 rgba(72,217,173,0));opacity:.9}50%{filter:drop-shadow(0 0 5px rgba(72,217,173,.65));opacity:1}}
+@keyframes mcAuraBreath{0%{transform:scale(.94) rotate(-1deg);opacity:.58}100%{transform:scale(1.08) rotate(1deg);opacity:.92}}
+@keyframes mcRadarSweep{to{transform:rotate(360deg)}}
+@keyframes mcScanline{0%{transform:translateY(-15vh);opacity:0}12%{opacity:.82}88%{opacity:.82}100%{transform:translateY(112vh);opacity:0}}
+@keyframes mcRingPulse{0%{transform:scale(.15);opacity:.8}72%{opacity:.22}100%{transform:scale(5.1);opacity:0}}
+@keyframes mcParticleRise{0%{transform:translate3d(0,0,0) scale(.5);opacity:0}10%{opacity:.88}70%{opacity:.48}100%{transform:translate3d(var(--dx),-105vh,0) scale(1.35);opacity:0}}
+@keyframes mcBadgeIn{0%{opacity:0;transform:translate(-50%,-28px) scale(.84)}70%{opacity:1;transform:translate(-50%,3px) scale(1.03)}100%{opacity:1;transform:translateX(-50%)}}
+@keyframes mcBadgeFloat{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,5px)}}
+@keyframes mcBadgePulse{0%{box-shadow:0 0 0 0 rgba(72,217,173,.72)}75%,100%{box-shadow:0 0 0 10px rgba(72,217,173,0)}}
+</style>`;
+ html=html.replace("</head>",liveCss+"</head>");
+ const liveRuntime=`<script id="mc-live-cinematic-runtime-v17-2">(()=>{const init=()=>{const live=document.getElementById('liveMap');if(!live||live.dataset.mcLiveFx==='1')return;live.dataset.mcLiveFx='1';const fx=document.createElement('div');fx.className='mc-live-fx';fx.innerHTML='<div class="mc-live-aura"></div><div class="mc-live-sweep"></div><div class="mc-live-scanline"></div><span class="mc-live-ring r1"></span><span class="mc-live-ring r2"></span><span class="mc-live-ring r3"></span><div class="mc-live-particles"><i style="--x:8%;--s:7px;--t:6.5s;--d:-1.2s;--dx:42px"></i><i style="--x:16%;--s:5px;--t:8.2s;--d:-4.1s;--dx:-28px"></i><i style="--x:24%;--s:9px;--t:7.4s;--d:-2.8s;--dx:18px"></i><i style="--x:33%;--s:6px;--t:9s;--d:-6.2s;--dx:-48px"></i><i style="--x:42%;--s:4px;--t:6.8s;--d:-3.4s;--dx:25px"></i><i style="--x:51%;--s:8px;--t:8.6s;--d:-5.5s;--dx:-22px"></i><i style="--x:61%;--s:5px;--t:7.1s;--d:-1.8s;--dx:36px"></i><i style="--x:70%;--s:10px;--t:9.4s;--d:-6.9s;--dx:-40px"></i><i style="--x:78%;--s:6px;--t:7.8s;--d:-4.7s;--dx:28px"></i><i style="--x:86%;--s:8px;--t:8.9s;--d:-2.1s;--dx:-35px"></i><i style="--x:93%;--s:4px;--t:6.9s;--d:-5.9s;--dx:19px"></i></div>';live.prepend(fx);const badge=document.createElement('div');badge.className='mc-live-status-badge';badge.innerHTML='<b></b><span>Live network</span>';live.appendChild(badge);const restart=()=>{if(live.classList.contains('hidden'))return;live.classList.remove('mc-live-cinematic');void live.offsetWidth;live.classList.add('mc-live-cinematic')};setTimeout(restart,0);let raf=0;live.addEventListener('pointermove',e=>{if(live.classList.contains('hidden')||raf)return;raf=requestAnimationFrame(()=>{raf=0;const r=live.getBoundingClientRect();if(!r.width||!r.height)return;live.style.setProperty('--mcx',(((e.clientX-r.left)/r.width)*100).toFixed(1)+'%');live.style.setProperty('--mcy',(((e.clientY-r.top)/r.height)*100).toFixed(1)+'%')})},{passive:true});document.addEventListener('click',e=>{const b=e.target&&e.target.closest?e.target.closest('.nav-btn'):null;if(!b)return;setTimeout(()=>{if(!live.classList.contains('hidden'))restart()},0)})};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init()})();<\/script>`;
+ html=html.replace("</body>",liveRuntime+"</body>");
+ const diagnostic=`<script id="metrochain-v17-diagnostics">(()=>{window.__MC_BUILD__='v17.2-live-cinematic';window.__MC_ERRORS__=[];addEventListener('error',e=>window.__MC_ERRORS__.push(String(e.error||e.message||'error')));addEventListener('unhandledrejection',e=>window.__MC_ERRORS__.push(String(e.reason||'rejection')));})();<\/script>`;
  html=html.replace("</body>",diagnostic+"</body>");
- if(!html||!html.includes("MétroChain")||!html.includes("main-nav")||!html.includes("nav-btn")||!html.includes("function networkPct(")||html.includes("metrochain-signal-v12")||html.includes("metrochain-motion-v13")||html.includes("mc13-motion-stage"))throw new Error("Application v17.1 incomplète");
+ if(!html||!html.includes("MétroChain")||!html.includes("main-nav")||!html.includes("nav-btn")||!html.includes("function networkPct(")||!html.includes("mc-live-cinematic-v17-2")||!html.includes("mc-live-cinematic-runtime-v17-2")||html.includes("metrochain-signal-v12")||html.includes("metrochain-motion-v13")||html.includes("mc13-motion-stage"))throw new Error("Application v17.2 incomplète");
  document.open();document.write(html);document.close();
 }catch(e){console.error(e);document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><small>'+String(e&&e.message?e.message:e)+'</small><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:1px solid #17283e;border-radius:10px;background:#fff;font-weight:700">Réessayer</button></div></div>'}})();
 </script></body></html>
