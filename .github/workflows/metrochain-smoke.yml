@@ -70,5 +70,7 @@ jobs:
         if: always()
         with:
           name: metrochain-live-diagnostic
-          path: metrochain-live.png
+          path: |
+            metrochain-live.png
+            metrochain/v2/index.html
           if-no-files-found: ignore
