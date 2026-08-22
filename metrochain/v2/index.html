@@ -2,14 +2,24 @@
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>MétroChain</title><style>html,body{margin:0;height:100%;font-family:system-ui;background:#eaf0ff;color:#17283e}.boot{height:100%;display:grid;place-items:center;padding:18px;box-sizing:border-box}.card{background:white;padding:24px 28px;border:1px solid #17283e;border-radius:18px;box-shadow:5px 6px 0 #17283e;text-align:center;max-width:430px}.dot{width:10px;height:10px;background:#48d9ad;border-radius:50%;display:inline-block;margin-right:8px;animation:p 1s infinite alternate}@keyframes p{to{opacity:.25}}small{display:block;margin-top:8px;color:#64748b}</style></head><body><div class="boot"><div class="card"><div><span class="dot"></span><b>Chargement de MétroChain…</b></div><small>Carte live · itinéraires · incidents · jeux</small></div></div><script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script><script>
 (async()=>{try{
  if(!window.pako)throw new Error("Décompresseur indisponible");
- const A="https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/3ac7ba34da18ca00a2ae86fff7aadd6456dc754a/metrochain/v2/bundles/";
+ const BASE="https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/3ac7ba34da18ca00a2ae86fff7aadd6456dc754a/metrochain/v2/bundles/";
  const files=["v7-0.js","v7-1.js","v7-2.js","v7-3.js","v7-4a.js","v7-4b.js","v7-5.js","v7-6.js","v7-7.js"];
- const texts=await Promise.all(files.map(async(f)=>{const r=await fetch(A+f,{cache:"force-cache"});if(!r.ok)throw new Error(`${f} : HTTP ${r.status}`);return r.text()}));
- const b64=texts.map((t,i)=>{const m=t.trim().match(/^export\s+default\s+(["'])([A-Za-z0-9+/=]+)\1;?$/);if(!m)throw new Error(`${files[i]} invalide`);return m[2]}).join("");
- if(b64.length!==71452)throw new Error(`Bundle incomplet (${b64.length}/71452)`);
- const bin=atob(b64),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
- const html=window.pako.ungzip(bytes,{to:"string"});
- if(!html||!html.includes("MétroChain")||!html.includes("liveMap"))throw new Error("Application incomplète");
+ const readExport=t=>{const m=t.trim().match(/^export\s+default\s+(["'])([A-Za-z0-9+/=]+)\1;?$/);if(!m)throw new Error("Morceau de bundle invalide");return m[2]};
+ const texts=await Promise.all(files.map(async f=>{const r=await fetch(BASE+f,{cache:"force-cache"});if(!r.ok)throw new Error(`${f} : HTTP ${r.status}`);return r.text()}));
+ const base64=texts.map(readExport).join("");
+ if(base64.length!==71452)throw new Error(`Bundle de base incomplet (${base64.length}/71452)`);
+ const decodeGzip=b64=>{const bin=atob(b64),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return window.pako.ungzip(bytes,{to:"string"})};
+ let html=decodeGzip(base64);
+ const patchFiles=["./bundles/v8-patch0.js?v=20260822h","./bundles/v8-patch1.js?v=20260822h"];
+ const patchTexts=await Promise.all(patchFiles.map(async f=>{const r=await fetch(f,{cache:"reload"});if(!r.ok)throw new Error(`${f} : HTTP ${r.status}`);return r.text()}));
+ const patch64=patchTexts.map(readExport).join("");
+ if(patch64.length!==12024)throw new Error(`Correctif incomplet (${patch64.length}/12024)`);
+ const ops=JSON.parse(decodeGzip(patch64));
+ const splitKeep=s=>s.match(/[^\n]*\n|[^\n]+$/g)||[];
+ const lines=splitKeep(html);
+ for(const [from,to,text] of [...ops].sort((a,b)=>b[0]-a[0]))lines.splice(from,to-from,...splitKeep(text));
+ html=lines.join("");
+ if(!html||!html.includes("MétroChain")||!html.includes("liveMap")||!html.includes("position reconstruite")||!html.includes("buildTravelPhases")||!html.includes("normalizeMetroCode"))throw new Error("Application v8 incomplète");
  document.open();document.write(html);document.close();
 }catch(e){console.error(e);document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><small>'+String(e&&e.message?e.message:e)+'</small><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:1px solid #17283e;border-radius:10px;background:#fff;font-weight:700">Réessayer</button></div></div>'}})();
 </script></body></html>
