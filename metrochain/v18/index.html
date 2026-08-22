@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>MétroChain</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#edf2f6}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#edf2f6}
+    #boot{position:fixed;inset:0;display:grid;place-items:center;background:#0d1826;color:#fff;font:700 14px/1.4 Inter,system-ui,sans-serif;letter-spacing:.02em;z-index:10;transition:opacity .35s ease,visibility .35s ease}
+    #boot.hide{opacity:0;visibility:hidden}
+    #boot span{display:inline-flex;align-items:center;gap:10px;padding:14px 18px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.06);box-shadow:0 18px 60px rgba(0,0,0,.24)}
+    #boot i{width:8px;height:8px;border-radius:50%;background:#47d7a5;box-shadow:0 0 0 0 rgba(71,215,165,.65);animation:p 1.5s ease-out infinite}
+    @keyframes p{to{box-shadow:0 0 0 12px rgba(71,215,165,0)}}
+  </style>
+</head>
+<body>
+  <div id="boot"><span><i></i>Chargement de MétroChain</span></div>
+  <iframe id="appFrame" title="MétroChain" src="../v2/index.html?v=20260823v17-3-pro"></iframe>
+  <script>
+  (()=>{
+    const frame=document.getElementById('appFrame'),boot=document.getElementById('boot');
+    const apply=()=>{
+      try{
+        const w=frame.contentWindow,d=frame.contentDocument;
+        if(!d||!d.querySelector('.app')) return false;
+        if(!d.getElementById('mc18-theme')){
+          const l=d.createElement('link');l.id='mc18-theme';l.rel='stylesheet';l.href='./theme.css?v=20260823a';d.head.appendChild(l);
+        }
+        if(!d.getElementById('mc18-runtime')){
+          const s=d.createElement('script');s.id='mc18-runtime';s.src='./theme.js?v=20260823a';d.body.appendChild(s);
+        }
+        boot.classList.add('hide');
+        return true;
+      }catch(e){console.error('MetroChain v18 shell',e);return false}
+    };
+    frame.addEventListener('load',()=>{
+      let n=0;const t=setInterval(()=>{if(apply()||++n>120)clearInterval(t)},100);
+    });
+  })();
+  </script>
+</body>
+</html>
