@@ -20,14 +20,14 @@
  const v12files=["v12x-patch0.js","v12x-patch1.js","v12x-patch2.js","v12x-patch3a.js","v12x-patch3b.js","v12x-patch4.js","v12x-patch5.js"].map(f=>`https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/5c7ef5e166a34d2fb41683c4720bf58f7d8abc8f/metrochain/v2/bundles/${f}`);
  const v12texts=await Promise.all(v12files.map(async f=>{const r=await fetch(f,{cache:"force-cache"});if(!r.ok)throw new Error(`v12 ${f} : HTTP ${r.status}`);return r.text()}));
  const v12b64=v12texts.map(readExport).join("");if(v12b64.length!==15744)throw new Error(`Correctif v12 incomplet (${v12b64.length}/15744)`);html=applyOps(html,JSON.parse(decodeGzip(v12b64)));
-
- // v15 SAFE BUILD: remove the unstable v13 motion layer entirely and neutralize the v12 recursive observer.
- html=html.replace(/observe\(body,\s*\{\s*subtree\s*:\s*true/g,"observe(body,{subtree:false");
- const safe=`<style id="metrochain-safe-v15">
- *,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}
- </style><script id="metrochain-safe-runtime-v15">(()=>{document.addEventListener('click',e=>{if(e.target&&e.target.closest&&e.target.closest('header,nav,.topbar,.header,.main-nav')){try{if(typeof liveAnimationId!=='undefined'&&liveAnimationId){cancelAnimationFrame(liveAnimationId);liveAnimationId=null}}catch(_){}}},true)})();<\/script>`;
- html=html.replace("</body>",safe+"</body>");
- if(!html||!html.includes("MétroChain")||!html.includes("movement_timeline")||!html.includes("buildTimelinePhases")||!html.includes("Départ prévu")||!html.includes("service_state")||!html.includes("metrochain-signal-v12")||!html.includes("metrochain-safe-v15")||html.includes("metrochain-motion-v13")||html.includes("mc13-motion-stage")||/observe\(body,\s*\{\s*subtree\s*:\s*true/.test(html))throw new Error("Application v15 safe incomplète");
+ // v16: keep v12 features, remove the recursive .app observer, and use a static redesign.
+ const recursive="new MutationObserver(()=>{setVisualMode();animateVisibleScreen()}).observe(document.querySelector('.app'),{subtree:true,attributes:true,attributeFilter:['class']});";
+ const safeObserver="const mcScreenVisible=new WeakMap();document.querySelectorAll('main').forEach(screen=>{mcScreenVisible.set(screen,!screen.classList.contains('hidden'));new MutationObserver(()=>{const visible=!screen.classList.contains('hidden'),was=mcScreenVisible.get(screen);mcScreenVisible.set(screen,visible);setVisualMode();if(visible&&!was)animateVisibleScreen()}).observe(screen,{attributes:true,attributeFilter:['class']})});";
+ if(!html.includes(recursive))throw new Error("Observer v12 attendu introuvable");
+ html=html.replace(recursive,safeObserver);
+ const redesign=`<link id="metrochain-v16-redesign" rel="stylesheet" href="./styles/v16-static.css?v=20260822v16"><script id="metrochain-v16-runtime">(()=>{const nav=document.querySelector('.main-nav');if(nav){nav.style.pointerEvents='auto';nav.querySelectorAll('.nav-btn').forEach(b=>{b.style.pointerEvents='auto';b.disabled=false})}window.__MC_V16__={ready:true,at:Date.now()};})();<\/script>`;
+ html=html.replace("</body>",redesign+"</body>");
+ if(!html||!html.includes("MétroChain")||!html.includes("movement_timeline")||!html.includes("buildTimelinePhases")||!html.includes("Départ prévu")||!html.includes("service_state")||!html.includes("metrochain-signal-v12")||!html.includes("metrochain-v16-redesign")||html.includes(recursive)||html.includes("metrochain-motion-v13")||html.includes("mc13-motion-stage"))throw new Error("Application v16 incomplète");
  document.open();document.write(html);document.close();
 }catch(e){console.error(e);document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><small>'+String(e&&e.message?e.message:e)+'</small><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:1px solid #17283e;border-radius:10px;background:#fff;font-weight:700">Réessayer</button></div></div>'}})();
 </script></body></html>
