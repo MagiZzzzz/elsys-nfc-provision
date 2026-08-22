@@ -6,16 +6,49 @@
   const body=d.body;
   body.classList.add('mc18-ready');
 
-  // Decorative background belongs to the app shell only; it never overlays the live map.
   const bg=d.createElement('div');
   bg.className='mc18-bg';
   bg.innerHTML='<i class="mc18-orb a"></i><i class="mc18-orb b"></i><i class="mc18-orb c"></i>';
   body.prepend(bg);
 
+  // Remove any v18 CSS rule that would target the internal Leaflet/train engine.
+  // The v18 theme is allowed to style only the map wrapper and the controls around it.
+  setTimeout(()=>{
+    try{
+      const sheet=d.getElementById('mc18-theme')?.sheet;
+      if(sheet){
+        for(let i=sheet.cssRules.length-1;i>=0;i--){
+          const sel=sheet.cssRules[i]?.selectorText||'';
+          if(sel.includes('#liveMetroMap')) sheet.deleteRule(i);
+        }
+      }
+    }catch(e){console.warn('MetroChain v18 map CSS guard',e)}
+  },0);
+
   const visibleMain=()=>[...d.querySelectorAll('main')].find(m=>!m.classList.contains('hidden')&&getComputedStyle(m).display!=='none');
   let lastMain='';
 
+  function decorateScreen(main){
+    if(!main||main.id==='liveMap'||main.id==='home'||main.dataset.mc18Decorated==='1') return;
+    main.dataset.mc18Decorated='1';
+    const shell=main.firstElementChild;
+    if(shell) shell.classList.add('mc18-screen-shell');
+    const heading=main.querySelector('h1,h2');
+    if(heading){
+      let node=heading.parentElement,best=null;
+      const mw=Math.max(main.getBoundingClientRect().width,1);
+      while(node&&node!==main){
+        const r=node.getBoundingClientRect();
+        if(r.width>mw*.72&&r.height>70&&r.height<290) best=node;
+        if(node===shell) break;
+        node=node.parentElement;
+      }
+      if(best) best.classList.add('mc18-screen-hero');
+    }
+  }
+
   function indexElements(main){
+    decorateScreen(main);
     [...main.children].forEach((el,i)=>{
       if(!el.id||el.id!=='liveMetroMap'){
         el.style.setProperty('--mc-i',Math.min(i,12));
@@ -36,13 +69,11 @@
     body.dataset.mc18Page=main.id||'main';
   }
 
-  // No MutationObserver: page transitions are replayed only after actual user navigation.
   d.addEventListener('click',()=>setTimeout(()=>animateMain(false),28),true);
   d.addEventListener('keydown',e=>{
     if(e.key==='Enter'||e.key==='Escape') setTimeout(()=>animateMain(false),30);
   },true);
 
-  // Premium pointer depth only for non-map content cards.
   const tiltSelector='main:not(#liveMap) .card,main:not(#liveMap) [class*="-card"],main:not(#liveMap) .panel';
   const tilts=[...d.querySelectorAll(tiltSelector)].slice(0,80);
   tilts.forEach(el=>{
@@ -61,7 +92,6 @@
     },{passive:true});
   });
 
-  // Mouse-driven background depth, event based (no perpetual animation loop).
   let raf=0,mx=0,my=0;
   d.addEventListener('pointermove',e=>{
     if(e.pointerType==='touch') return;
@@ -77,7 +107,6 @@
     });
   },{passive:true});
 
-  // Stagger menus/buttons once at startup.
   d.querySelectorAll('.main-nav .nav-btn').forEach((b,i)=>{
     b.style.opacity='0';
     b.style.transform='translateY(-8px)';
@@ -87,5 +116,6 @@
     },80+i*45);
   });
 
+  d.querySelectorAll('main').forEach(decorateScreen);
   animateMain(true);
 })();
