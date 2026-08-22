@@ -17,51 +17,103 @@
  html=applyOps(html,await patch("https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/326a100d752f7d1b2b17391a05ec5b7bb823e0a3/metrochain/v2/bundles/v9-patch0.js",3552,"Correctif v9"));
  html=applyOps(html,await patch("https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/c22aa74bbb745071d0133b4ceea97f0edddcda5b/metrochain/v2/bundles/v10-patch0.js",1660,"Correctif v10"));
  html=applyOps(html,await patch("https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/5a95b83aecfb17af4a1c911ba8ee894e071e6258/metrochain/v2/bundles/v11-patch0.js",4848,"Correctif v11"));
- // v17.2: stable v11 baseline + local progress fix + cinematic animations scoped to Carte live.
+ // v17.3: stable v11 baseline + local progress fix + professional Carte live redesign and functional motion.
  if(!html.includes("function networkPct(")){
    const anchor="function allUniqueMastered(){";
    if(!html.includes(anchor))throw new Error("Point d'injection networkPct introuvable");
    html=html.replace(anchor,"function networkPct(){const total=totalLineStops(),mastered=ORDER.reduce((n,l)=>n+masteredFor(l).size,0);return total?Math.round(mastered/total*100):0}\n"+anchor);
  }
- const liveCss=`<style id="mc-live-cinematic-v17-2">
-#liveMap{position:relative!important;isolation:isolate;overflow:hidden;--mcx:50%;--mcy:48%}
-#liveMap.mc-live-cinematic{animation:mcLiveStageIn .9s cubic-bezier(.16,1,.3,1) both}
-#liveMap .leaflet-container{position:relative;z-index:1;animation:mcMapReveal 1.15s cubic-bezier(.16,1,.3,1) both;box-shadow:inset 0 0 90px rgba(17,40,62,.22),0 24px 70px rgba(23,40,62,.16)}
-#liveMap.mc-live-cinematic .leaflet-control-container>*{animation:mcPanelDrop .8s cubic-bezier(.16,1,.3,1) .12s both}
-#liveMap.mc-live-cinematic [class*="panel"],#liveMap.mc-live-cinematic [class*="card"]{animation:mcPanelFly .75s cubic-bezier(.16,1,.3,1) .08s both}
-#liveMap .leaflet-marker-icon{animation:mcMarkerGlow 1.65s ease-in-out infinite;will-change:filter,opacity}
-#liveMap .leaflet-interactive{animation:mcLineGlow 3.2s ease-in-out infinite;will-change:filter,opacity}
-#liveMap .mc-live-fx{position:absolute;inset:0;z-index:450;pointer-events:none;overflow:hidden;border-radius:22px}
-#liveMap .mc-live-aura{position:absolute;inset:-18%;background:radial-gradient(circle at var(--mcx) var(--mcy),rgba(72,217,173,.50) 0 8%,rgba(72,217,173,.18) 18%,rgba(98,113,255,.16) 34%,transparent 58%);filter:blur(22px) saturate(1.55);mix-blend-mode:screen;opacity:.82;animation:mcAuraBreath 4.8s ease-in-out infinite alternate}
-#liveMap .mc-live-sweep{position:absolute;left:-28%;top:-38%;width:156%;height:176%;background:conic-gradient(from 20deg at 50% 50%,transparent 0 73%,rgba(72,217,173,.04) 76%,rgba(72,217,173,.48) 80%,rgba(255,255,255,.72) 81.2%,rgba(98,113,255,.28) 82.5%,transparent 86%);mix-blend-mode:screen;filter:blur(2px);opacity:.72;animation:mcRadarSweep 6.5s linear infinite}
-#liveMap .mc-live-scanline{position:absolute;left:-5%;top:-18%;width:110%;height:150px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.05) 35%,rgba(72,217,173,.28) 50%,rgba(255,255,255,.07) 62%,transparent);filter:blur(5px);mix-blend-mode:screen;animation:mcScanline 4.2s cubic-bezier(.45,0,.55,1) infinite}
-#liveMap .mc-live-ring{position:absolute;left:50%;top:53%;width:180px;height:180px;margin:-90px;border:1px solid rgba(72,217,173,.58);border-radius:50%;box-shadow:0 0 30px rgba(72,217,173,.22),inset 0 0 30px rgba(72,217,173,.12);animation:mcRingPulse 3.4s ease-out infinite}
-#liveMap .mc-live-ring.r2{animation-delay:1.12s}#liveMap .mc-live-ring.r3{animation-delay:2.24s}
-#liveMap .mc-live-particles{position:absolute;inset:0;overflow:hidden}
-#liveMap .mc-live-particles i{position:absolute;left:var(--x);bottom:-24px;width:var(--s);height:var(--s);border-radius:50%;background:radial-gradient(circle,#fff 0 12%,rgba(72,217,173,.95) 38%,rgba(72,217,173,0) 72%);filter:drop-shadow(0 0 8px rgba(72,217,173,.85));opacity:0;animation:mcParticleRise var(--t) linear var(--d) infinite}
-#liveMap .mc-live-status-badge{position:absolute;top:18px;left:50%;z-index:1250;transform:translateX(-50%);display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.34);background:rgba(16,28,43,.72);color:#fff;font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 35px rgba(16,28,43,.28),0 0 24px rgba(72,217,173,.24);backdrop-filter:blur(14px);pointer-events:none;animation:mcBadgeIn .8s cubic-bezier(.16,1,.3,1) .22s both,mcBadgeFloat 3.2s ease-in-out 1.2s infinite}
-#liveMap .mc-live-status-badge b{width:9px;height:9px;border-radius:50%;background:#48d9ad;box-shadow:0 0 0 0 rgba(72,217,173,.8);animation:mcBadgePulse 1.35s ease-out infinite}
-@keyframes mcLiveStageIn{0%{opacity:.1;filter:blur(9px) saturate(.7)}45%{opacity:1;filter:blur(0) saturate(1.24)}100%{opacity:1;filter:none}}
-@keyframes mcMapReveal{0%{opacity:.18;filter:brightness(.65) saturate(.5) blur(7px)}55%{opacity:1;filter:brightness(1.12) saturate(1.35) blur(0)}100%{opacity:1;filter:none}}
-@keyframes mcPanelDrop{0%{opacity:0;transform:translateY(-34px) scale(.94)}65%{opacity:1;transform:translateY(4px) scale(1.015)}100%{opacity:1;transform:none}}
-@keyframes mcPanelFly{0%{opacity:0;transform:translateY(34px) scale(.96)}70%{opacity:1;transform:translateY(-3px) scale(1.01)}100%{opacity:1;transform:none}}
-@keyframes mcMarkerGlow{0%,100%{filter:drop-shadow(0 0 2px rgba(255,255,255,.35)) brightness(1)}50%{filter:drop-shadow(0 0 10px rgba(72,217,173,.9)) brightness(1.35)}}
-@keyframes mcLineGlow{0%,100%{filter:drop-shadow(0 0 0 rgba(72,217,173,0));opacity:.9}50%{filter:drop-shadow(0 0 5px rgba(72,217,173,.65));opacity:1}}
-@keyframes mcAuraBreath{0%{transform:scale(.94) rotate(-1deg);opacity:.58}100%{transform:scale(1.08) rotate(1deg);opacity:.92}}
-@keyframes mcRadarSweep{to{transform:rotate(360deg)}}
-@keyframes mcScanline{0%{transform:translateY(-15vh);opacity:0}12%{opacity:.82}88%{opacity:.82}100%{transform:translateY(112vh);opacity:0}}
-@keyframes mcRingPulse{0%{transform:scale(.15);opacity:.8}72%{opacity:.22}100%{transform:scale(5.1);opacity:0}}
-@keyframes mcParticleRise{0%{transform:translate3d(0,0,0) scale(.5);opacity:0}10%{opacity:.88}70%{opacity:.48}100%{transform:translate3d(var(--dx),-105vh,0) scale(1.35);opacity:0}}
-@keyframes mcBadgeIn{0%{opacity:0;transform:translate(-50%,-28px) scale(.84)}70%{opacity:1;transform:translate(-50%,3px) scale(1.03)}100%{opacity:1;transform:translateX(-50%)}}
-@keyframes mcBadgeFloat{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,5px)}}
-@keyframes mcBadgePulse{0%{box-shadow:0 0 0 0 rgba(72,217,173,.72)}75%,100%{box-shadow:0 0 0 10px rgba(72,217,173,0)}}
+ const liveCss=`<style id="mc-live-professional-v17-3">
+#liveMap{position:relative!important;background:#eef3f8!important;color:#102033;isolation:isolate;padding:0 0 28px!important}
+#liveMap .mc-live-fx,#liveMap .mc-live-status-badge{display:none!important}
+#liveMap .live-map-shell{overflow:hidden!important;border:1px solid rgba(139,157,180,.38)!important;border-radius:24px!important;background:#f7f9fc!important;box-shadow:0 22px 60px rgba(8,22,42,.16),0 2px 8px rgba(8,22,42,.06)!important;transform-origin:50% 10%}
+#liveMap .live-map-head{position:relative!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(420px,.95fr)!important;gap:28px!important;align-items:center!important;min-height:158px!important;padding:28px 30px!important;background:linear-gradient(135deg,#0b1728 0%,#10243b 58%,#15304b 100%)!important;color:#fff!important;border-bottom:1px solid rgba(255,255,255,.08)!important}
+#liveMap .live-map-head:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#43d6a4;box-shadow:0 0 24px rgba(67,214,164,.38)}
+#liveMap .live-map-head .eyebrow{color:#8fa5bd!important;font-size:11px!important;letter-spacing:.16em!important;font-weight:850!important}
+#liveMap .live-map-head h2{margin:6px 0 7px!important;color:#fff!important;font-size:30px!important;line-height:1.04!important;letter-spacing:-.035em!important}
+#liveMap .live-map-head p{margin:0!important;max-width:720px!important;color:#aebfd0!important;font-size:13px!important;line-height:1.55!important}
+#liveMap #liveBack{justify-self:start!important;margin-bottom:12px!important;background:rgba(255,255,255,.055)!important;color:#dfe9f4!important;border:1px solid rgba(255,255,255,.13)!important;box-shadow:none!important;transition:transform .2s ease,background .2s ease,border-color .2s ease!important}
+#liveMap #liveBack:hover{transform:translateX(-3px)!important;background:rgba(255,255,255,.1)!important;border-color:rgba(255,255,255,.23)!important}
+#liveMap .live-map-actions{display:flex!important;flex-direction:column!important;align-items:flex-end!important;justify-content:center!important;gap:10px!important}
+#liveMap .live-status{max-width:100%!important;min-height:34px!important;padding:8px 12px!important;border-radius:11px!important;background:rgba(255,255,255,.07)!important;color:#d9e6f2!important;border:1px solid rgba(255,255,255,.11)!important;box-shadow:none!important;backdrop-filter:none!important}
+#liveMap .live-status.live{background:rgba(67,214,164,.10)!important;border-color:rgba(67,214,164,.25)!important;color:#eafff7!important}
+#liveMap .live-status.live i{background:#43d6a4!important;box-shadow:0 0 0 0 rgba(67,214,164,.65);animation:mcProLiveDot 1.8s ease-out infinite!important}
+#liveMap .journey-box{display:grid!important;grid-template-columns:265px minmax(0,1fr)!important;gap:26px!important;align-items:center!important;padding:22px 26px!important;background:#fff!important;border:0!important;border-bottom:1px solid #dfe6ee!important;box-shadow:none!important}
+#liveMap .journey-intro{padding:0!important}
+#liveMap .journey-intro .eyebrow{color:#8090a3!important;font-size:10px!important;letter-spacing:.13em!important}
+#liveMap .journey-intro h3{margin:4px 0 4px!important;color:#102033!important;font-size:18px!important;letter-spacing:-.02em!important}
+#liveMap .journey-intro p{margin:0!important;color:#758499!important;font-size:11px!important;line-height:1.45!important}
+#liveMap .journey-form{display:grid!important;grid-template-columns:minmax(220px,1fr) 42px minmax(220px,1fr) 112px!important;gap:10px!important;align-items:end!important}
+#liveMap .place-field span{color:#5f7188!important;font-size:10px!important;font-weight:800!important}
+#liveMap .place-field input{height:44px!important;border:1px solid #cfd9e5!important;border-radius:12px!important;background:#f8fafc!important;color:#13243a!important;box-shadow:inset 0 1px 0 rgba(16,32,51,.03)!important;font-weight:700!important;transition:border-color .2s ease,box-shadow .2s ease,background .2s ease!important}
+#liveMap .place-field input:focus{outline:none!important;border-color:#7188a1!important;background:#fff!important;box-shadow:0 0 0 4px rgba(52,78,107,.08)!important}
+#liveMap .journey-swap{height:44px!important;border-radius:12px!important;background:#f0f4f8!important;color:#233b55!important;border:1px solid #ccd7e3!important;box-shadow:none!important;transition:transform .28s cubic-bezier(.2,.8,.2,1),background .2s ease!important}
+#liveMap .journey-swap:hover{transform:rotate(180deg)!important;background:#e7edf4!important}
+#liveMap .journey-submit{height:44px!important;border-radius:12px!important;background:#12253c!important;color:#fff!important;border:1px solid #0c1a2b!important;box-shadow:0 4px 0 #08121f!important;font-weight:850!important;transition:transform .18s ease,box-shadow .18s ease,background .18s ease!important}
+#liveMap .journey-submit:hover{background:#18314e!important;transform:translateY(-1px)!important;box-shadow:0 5px 0 #08121f!important}
+#liveMap .journey-submit:active{transform:translateY(2px)!important;box-shadow:0 2px 0 #08121f!important}
+#liveMap .traffic-strip{min-height:50px!important;padding:8px 16px!important;background:#fff!important;border:0!important;border-bottom:1px solid #e0e7ef!important;color:#253a53!important}
+#liveMap .traffic-strip.warn{box-shadow:inset 4px 0 0 #f1a33b!important}
+#liveMap .traffic-dot{background:#f1a33b!important;box-shadow:0 0 0 0 rgba(241,163,59,.45);animation:mcProTrafficPulse 2.4s ease-out infinite!important}
+#liveMap .traffic-details{color:#7c8ca0!important}
+#liveMap .traffic-actions .live-tool-btn{background:#f7f9fb!important}
+#liveMap .live-toolbar{display:flex!important;align-items:center!important;gap:10px!important;min-height:58px!important;padding:10px 14px!important;background:#f7f9fc!important;border:0!important;border-bottom:1px solid #e0e7ef!important;box-shadow:none!important}
+#liveMap .live-line-filters{display:flex!important;gap:7px!important;align-items:center!important;overflow-x:auto!important;scrollbar-width:none!important}
+#liveMap .live-line-filters::-webkit-scrollbar{display:none!important}
+#liveMap .live-line-btn,#liveMap .live-tool-btn{height:34px!important;min-width:34px!important;border-radius:10px!important;border:1px solid #ccd7e3!important;box-shadow:none!important;font-weight:850!important;transition:transform .18s ease,box-shadow .18s ease,filter .18s ease,border-color .18s ease!important}
+#liveMap .live-line-btn:hover,#liveMap .live-tool-btn:hover{transform:translateY(-2px)!important;box-shadow:0 6px 14px rgba(13,30,51,.10)!important;filter:saturate(1.08)!important}
+#liveMap .live-tool-btn{background:#fff!important;color:#2f465f!important}
+#liveMap #liveAllLines.active{background:#11243a!important;color:#fff!important;border-color:#11243a!important}
+#liveMap .live-line-btn small{display:flex!important;align-items:center!important;justify-content:center!important;position:absolute!important;right:-4px!important;top:-5px!important;min-width:15px!important;height:15px!important;margin:0!important;padding:0 3px!important;border-radius:999px!important;background:#fff!important;color:#4d6076!important;border:1px solid #b9c7d6!important;font-size:8px!important;font-weight:900!important;box-shadow:0 2px 5px rgba(9,24,42,.11)!important}
+#liveMap .live-line-btn{position:relative!important}
+#liveMap .live-line-stats{display:flex!important;gap:0!important;min-height:62px!important;padding:8px 14px!important;background:#f7f9fc!important;border:0!important;border-bottom:1px solid #dfe6ee!important;overflow-x:auto!important}
+#liveMap .live-stat-card{min-width:112px!important;padding:7px 14px!important;background:transparent!important;border:0!important;border-right:1px solid #dfe6ee!important;border-radius:0!important;box-shadow:none!important}
+#liveMap .live-stat-card:last-child{border-right:0!important}
+#liveMap .live-stat-card b{color:#16304c!important;font-size:17px!important;letter-spacing:-.02em!important}
+#liveMap .live-stat-card small{margin-top:2px!important;color:#8594a6!important;font-size:9px!important;letter-spacing:.02em!important}
+#liveMap .live-map-wrap{position:relative!important;padding:14px!important;background:#eaf0f6!important;overflow:hidden!important}
+#liveMap #liveMetroMap{height:680px!important;border:1px solid #cbd6e2!important;border-radius:18px!important;overflow:hidden!important;background:#eaf0f6!important;box-shadow:0 18px 42px rgba(10,27,48,.14)!important;transform-origin:50% 50%}
+#liveMap #liveMetroMap:after{content:"";position:absolute;inset:0;z-index:900;pointer-events:none;border-radius:inherit;box-shadow:inset 0 0 0 1px rgba(255,255,255,.42),inset 0 0 60px rgba(13,32,54,.055)}
+#liveMap .leaflet-control-zoom a{background:rgba(255,255,255,.92)!important;color:#1d334d!important;border-color:#d0dbe6!important;box-shadow:none!important}
+#liveMap .leaflet-control-zoom{border:1px solid #ccd8e3!important;border-radius:12px!important;overflow:hidden!important;box-shadow:0 7px 20px rgba(13,30,51,.12)!important}
+#liveMap .metro-station-label{margin-left:7px!important;padding:2px 5px!important;border:1px solid rgba(177,192,207,.72)!important;border-radius:5px!important;background:rgba(255,255,255,.82)!important;color:#53667b!important;box-shadow:0 2px 5px rgba(21,42,65,.06)!important;font-size:9px!important;font-weight:720!important;opacity:.22!important;transition:opacity .18s ease,transform .18s ease,background .18s ease!important}
+#liveMap .metro-station-label:before{display:none!important}
+#liveMap .metro-station-label.mc-major-station{opacity:.94!important;background:rgba(255,255,255,.96)!important;color:#243b55!important;border-color:#aebdcd!important;font-size:10px!important;font-weight:850!important;box-shadow:0 3px 8px rgba(21,42,65,.10)!important}
+#liveMap #liveMetroMap:hover .metro-station-label:not(.mc-major-station){opacity:.50!important}
+#liveMap .leaflet-popup-content-wrapper{border-radius:14px!important;background:#fff!important;box-shadow:0 18px 50px rgba(11,28,48,.22)!important;border:1px solid #d6e0e9!important}
+#liveMap .leaflet-popup-tip{box-shadow:none!important}
+#liveMap canvas.metro-train-canvas{filter:drop-shadow(0 2px 3px rgba(7,24,43,.22)) saturate(1.07)!important}
+#liveMap.mc-pro-enter .live-map-shell{animation:mcProShellIn .8s cubic-bezier(.16,1,.3,1) both!important}
+#liveMap.mc-pro-enter .live-map-head{animation:mcProHeaderIn .75s cubic-bezier(.16,1,.3,1) .05s both!important}
+#liveMap.mc-pro-enter .journey-box{animation:mcProBarIn .78s cubic-bezier(.16,1,.3,1) .12s both!important}
+#liveMap.mc-pro-enter .traffic-strip{animation:mcProBarIn .76s cubic-bezier(.16,1,.3,1) .18s both!important}
+#liveMap.mc-pro-enter .live-toolbar{animation:mcProBarIn .76s cubic-bezier(.16,1,.3,1) .24s both!important}
+#liveMap.mc-pro-enter .live-line-stats{animation:mcProBarIn .78s cubic-bezier(.16,1,.3,1) .30s both!important}
+#liveMap.mc-pro-enter .live-map-wrap{animation:mcProMapFrameIn 1.0s cubic-bezier(.16,1,.3,1) .23s both!important}
+#liveMap.mc-pro-enter #liveMetroMap{animation:mcProMapIn 1.15s cubic-bezier(.16,1,.3,1) .25s both!important}
+#liveMap .mc-map-curtain{position:absolute;inset:14px;z-index:1200;pointer-events:none;border-radius:18px;overflow:hidden;background:#0b1728;display:grid;place-items:center;color:#dce8f4;transform-origin:50% 0;animation:mcProCurtain 1.18s cubic-bezier(.76,0,.24,1) .20s both}
+#liveMap .mc-map-curtain:after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:#43d6a4;box-shadow:0 0 22px rgba(67,214,164,.55);animation:mcProCurtainLine 1.0s ease .16s both}
+#liveMap .mc-map-curtain span{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;opacity:.9;animation:mcProCurtainText .72s ease both}
+#liveMap .mc-map-curtain span:before{content:"";width:8px;height:8px;border-radius:50%;background:#43d6a4;box-shadow:0 0 0 0 rgba(67,214,164,.6);animation:mcProLiveDot 1.5s ease-out infinite}
+@keyframes mcProShellIn{0%{opacity:0;transform:translateY(18px) scale(.988);box-shadow:0 0 0 rgba(8,22,42,0)}100%{opacity:1;transform:none}}
+@keyframes mcProHeaderIn{0%{opacity:0;transform:translateY(-28px)}100%{opacity:1;transform:none}}
+@keyframes mcProBarIn{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:none}}
+@keyframes mcProMapFrameIn{0%{opacity:0;transform:translateY(34px)}100%{opacity:1;transform:none}}
+@keyframes mcProMapIn{0%{opacity:.12;filter:blur(7px) saturate(.72);transform:scale(1.045)}55%{opacity:1;filter:blur(0) saturate(1.06);transform:scale(1.008)}100%{opacity:1;filter:none;transform:none}}
+@keyframes mcProCurtain{0%,48%{transform:translateY(0);opacity:1}100%{transform:translateY(-102%);opacity:.98}}
+@keyframes mcProCurtainLine{0%{transform:scaleX(.05);opacity:.3}55%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:.7}}
+@keyframes mcProCurtainText{0%{opacity:0;transform:translateY(8px)}100%{opacity:.95;transform:none}}
+@keyframes mcProLiveDot{0%{box-shadow:0 0 0 0 rgba(67,214,164,.55)}80%,100%{box-shadow:0 0 0 8px rgba(67,214,164,0)}}
+@keyframes mcProTrafficPulse{0%{box-shadow:0 0 0 0 rgba(241,163,59,.42)}80%,100%{box-shadow:0 0 0 7px rgba(241,163,59,0)}}
+@media(max-width:980px){#liveMap .live-map-head{grid-template-columns:1fr!important}.live-map-actions{align-items:flex-start!important}#liveMap .journey-box{grid-template-columns:1fr!important}#liveMap .journey-form{grid-template-columns:1fr 42px 1fr!important}#liveMap .journey-submit{grid-column:1/-1!important}}
+@media(prefers-reduced-motion:reduce){#liveMap *,#liveMap *:before,#liveMap *:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
 </style>`;
  html=html.replace("</head>",liveCss+"</head>");
- const liveRuntime=`<script id="mc-live-cinematic-runtime-v17-2">(()=>{const init=()=>{const live=document.getElementById('liveMap');if(!live||live.dataset.mcLiveFx==='1')return;live.dataset.mcLiveFx='1';const fx=document.createElement('div');fx.className='mc-live-fx';fx.innerHTML='<div class="mc-live-aura"></div><div class="mc-live-sweep"></div><div class="mc-live-scanline"></div><span class="mc-live-ring r1"></span><span class="mc-live-ring r2"></span><span class="mc-live-ring r3"></span><div class="mc-live-particles"><i style="--x:8%;--s:7px;--t:6.5s;--d:-1.2s;--dx:42px"></i><i style="--x:16%;--s:5px;--t:8.2s;--d:-4.1s;--dx:-28px"></i><i style="--x:24%;--s:9px;--t:7.4s;--d:-2.8s;--dx:18px"></i><i style="--x:33%;--s:6px;--t:9s;--d:-6.2s;--dx:-48px"></i><i style="--x:42%;--s:4px;--t:6.8s;--d:-3.4s;--dx:25px"></i><i style="--x:51%;--s:8px;--t:8.6s;--d:-5.5s;--dx:-22px"></i><i style="--x:61%;--s:5px;--t:7.1s;--d:-1.8s;--dx:36px"></i><i style="--x:70%;--s:10px;--t:9.4s;--d:-6.9s;--dx:-40px"></i><i style="--x:78%;--s:6px;--t:7.8s;--d:-4.7s;--dx:28px"></i><i style="--x:86%;--s:8px;--t:8.9s;--d:-2.1s;--dx:-35px"></i><i style="--x:93%;--s:4px;--t:6.9s;--d:-5.9s;--dx:19px"></i></div>';live.prepend(fx);const badge=document.createElement('div');badge.className='mc-live-status-badge';badge.innerHTML='<b></b><span>Live network</span>';live.appendChild(badge);const restart=()=>{if(live.classList.contains('hidden'))return;live.classList.remove('mc-live-cinematic');void live.offsetWidth;live.classList.add('mc-live-cinematic')};setTimeout(restart,0);let raf=0;live.addEventListener('pointermove',e=>{if(live.classList.contains('hidden')||raf)return;raf=requestAnimationFrame(()=>{raf=0;const r=live.getBoundingClientRect();if(!r.width||!r.height)return;live.style.setProperty('--mcx',(((e.clientX-r.left)/r.width)*100).toFixed(1)+'%');live.style.setProperty('--mcy',(((e.clientY-r.top)/r.height)*100).toFixed(1)+'%')})},{passive:true});document.addEventListener('click',e=>{const b=e.target&&e.target.closest?e.target.closest('.nav-btn'):null;if(!b)return;setTimeout(()=>{if(!live.classList.contains('hidden'))restart()},0)})};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init()})();<\/script>`;
+ const liveRuntime=`<script id="mc-live-professional-runtime-v17-3">(()=>{const MAJOR=new Set(['Châtelet','Montparnasse Bienvenue','Nation','République','Saint-Lazare','Bastille','Charles de Gaulle - Étoile','Concorde','Gare de l’Est','Gare de l\\'Est','Gare du Nord','Gare de Lyon','Gare d’Austerlitz','Gare d\\'Austerlitz','Opéra','Bercy','Place d’Italie','Place d\\'Italie','Mairie de Saint-Ouen','Porte de Clichy','Jaurès','La Motte-Picquet - Grenelle','Hôtel de Ville','Pyramides']);const decorate=live=>{live.querySelectorAll('.metro-station-label').forEach(el=>{const n=(el.textContent||'').trim();if(MAJOR.has(n))el.classList.add('mc-major-station')})};const init=()=>{const live=document.getElementById('liveMap');if(!live||live.dataset.mcPro==='1')return;live.dataset.mcPro='1';live.querySelectorAll('.mc-live-fx,.mc-live-status-badge').forEach(x=>x.remove());const wrap=live.querySelector('.live-map-wrap');if(wrap&&!wrap.querySelector('.mc-map-curtain')){const c=document.createElement('div');c.className='mc-map-curtain';c.innerHTML='<span>Synchronisation du réseau</span>';wrap.appendChild(c);setTimeout(()=>c.remove(),1600)}decorate(live);const mapRoot=live.querySelector('#liveMetroMap');if(mapRoot){new MutationObserver(()=>decorate(live)).observe(mapRoot,{childList:true,subtree:true})}const restart=()=>{if(live.classList.contains('hidden'))return;live.classList.remove('mc-pro-enter');void live.offsetWidth;live.classList.add('mc-pro-enter');const w=live.querySelector('.live-map-wrap');if(w){w.querySelector('.mc-map-curtain')?.remove();const c=document.createElement('div');c.className='mc-map-curtain';c.innerHTML='<span>Synchronisation du réseau</span>';w.appendChild(c);setTimeout(()=>c.remove(),1600)}};setTimeout(restart,0);document.addEventListener('click',e=>{const b=e.target&&e.target.closest?e.target.closest('.nav-btn'):null;if(!b)return;setTimeout(()=>{if(!live.classList.contains('hidden'))restart()},0)})};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init()})();<\\/script>`;
  html=html.replace("</body>",liveRuntime+"</body>");
- const diagnostic=`<script id="metrochain-v17-diagnostics">(()=>{window.__MC_BUILD__='v17.2-live-cinematic';window.__MC_ERRORS__=[];addEventListener('error',e=>window.__MC_ERRORS__.push(String(e.error||e.message||'error')));addEventListener('unhandledrejection',e=>window.__MC_ERRORS__.push(String(e.reason||'rejection')));})();<\/script>`;
+ const diagnostic=`<script id="metrochain-v17-diagnostics">(()=>{window.__MC_BUILD__='v17.3-live-professional';window.__MC_ERRORS__=[];addEventListener('error',e=>window.__MC_ERRORS__.push(String(e.error||e.message||'error')));addEventListener('unhandledrejection',e=>window.__MC_ERRORS__.push(String(e.reason||'rejection')));})();<\\/script>`;
  html=html.replace("</body>",diagnostic+"</body>");
- if(!html||!html.includes("MétroChain")||!html.includes("main-nav")||!html.includes("nav-btn")||!html.includes("function networkPct(")||!html.includes("mc-live-cinematic-v17-2")||!html.includes("mc-live-cinematic-runtime-v17-2")||html.includes("metrochain-signal-v12")||html.includes("metrochain-motion-v13")||html.includes("mc13-motion-stage"))throw new Error("Application v17.2 incomplète");
+ if(!html||!html.includes("MétroChain")||!html.includes("main-nav")||!html.includes("nav-btn")||!html.includes("function networkPct(")||!html.includes("mc-live-professional-v17-3")||!html.includes("mc-live-professional-runtime-v17-3")||html.includes("metrochain-signal-v12")||html.includes("metrochain-motion-v13")||html.includes("mc13-motion-stage"))throw new Error("Application v17.3 incomplète");
  document.open();document.write(html);document.close();
 }catch(e){console.error(e);document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><small>'+String(e&&e.message?e.message:e)+'</small><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:1px solid #17283e;border-radius:10px;background:#fff;font-weight:700">Réessayer</button></div></div>'}})();
 </script></body></html>
