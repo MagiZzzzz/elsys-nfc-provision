@@ -19,7 +19,16 @@
  const lines=splitKeep(html);
  for(const [from,to,text] of [...ops].sort((a,b)=>b[0]-a[0]))lines.splice(from,to-from,...splitKeep(text));
  html=lines.join("");
- if(!html||!html.includes("MétroChain")||!html.includes("liveMap")||!html.includes("position reconstruite")||!html.includes("buildTravelPhases")||!html.includes("normalizeMetroCode"))throw new Error("Application v8 incomplète");
+ const V9="https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/326a100d752f7d1b2b17391a05ec5b7bb823e0a3/metrochain/v2/bundles/v9-patch0.js";
+ const v9r=await fetch(V9,{cache:"force-cache"});
+ if(!v9r.ok)throw new Error(`Correctif v9 : HTTP ${v9r.status}`);
+ const v9b64=readExport(await v9r.text());
+ if(v9b64.length!==3552)throw new Error(`Correctif v9 incomplet (${v9b64.length}/3552)`);
+ const v9ops=JSON.parse(decodeGzip(v9b64));
+ const v9lines=splitKeep(html);
+ for(const [from,to,text] of [...v9ops].sort((a,b)=>b[0]-a[0]))v9lines.splice(from,to-from,...splitKeep(text));
+ html=v9lines.join("");
+ if(!html||!html.includes("MétroChain")||!html.includes("liveMap")||!html.includes("movement_timeline")||!html.includes("buildTimelinePhases")||!html.includes("position reconstruite"))throw new Error("Application v9 incomplète");
  document.open();document.write(html);document.close();
 }catch(e){console.error(e);document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><small>'+String(e&&e.message?e.message:e)+'</small><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:1px solid #17283e;border-radius:10px;background:#fff;font-weight:700">Réessayer</button></div></div>'}})();
 </script></body></html>
