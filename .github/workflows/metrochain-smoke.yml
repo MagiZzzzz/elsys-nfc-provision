@@ -40,8 +40,8 @@ jobs:
           await page.waitForFunction(()=>document.querySelector('.app')&&!document.querySelector('.boot'),null,{timeout:60000});
           const build=await page.evaluate(()=>({title:document.title,marker:window.__MC_BUILD__||window.__MC_V16__||null,navs:[...document.querySelectorAll('.nav-btn')].filter(b=>!b.classList.contains('hidden')&&getComputedStyle(b).display!=='none').map(b=>({text:b.textContent.trim(),target:b.dataset.target||b.dataset.screen||'',onclick:b.getAttribute('onclick')})),mains:[...document.querySelectorAll('main')].map(m=>m.id)}));
           console.log('BUILD '+JSON.stringify(build));
-          const contexts=await page.evaluate(()=>[...document.scripts].flatMap((s,script)=>{const t=s.textContent||'';const out=[];let i=t.indexOf('networkPct');while(i>=0){out.push({script,index:i,around:t.slice(Math.max(0,i-500),Math.min(t.length,i+900))});i=t.indexOf('networkPct',i+1)}return out}));
-          console.log('NETWORKPCT_CONTEXTS '+JSON.stringify(contexts));
+          const loadProgressSource=await page.evaluate(()=>typeof loadProgress==='function'?String(loadProgress):'loadProgress unavailable');
+          console.log('LOAD_PROGRESS_SOURCE '+loadProgressSource);
           if(!build.navs.length)throw new Error('No visible .nav-btn found');
           await page.evaluate(()=>{window.__heartbeat=0;window.__hb=setInterval(()=>window.__heartbeat++,25)});
           const clicks=[];
