@@ -20,20 +20,14 @@
  const v12files=["v12x-patch0.js","v12x-patch1.js","v12x-patch2.js","v12x-patch3a.js","v12x-patch3b.js","v12x-patch4.js","v12x-patch5.js"].map(f=>`https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/5c7ef5e166a34d2fb41683c4720bf58f7d8abc8f/metrochain/v2/bundles/${f}`);
  const v12texts=await Promise.all(v12files.map(async f=>{const r=await fetch(f,{cache:"force-cache"});if(!r.ok)throw new Error(`v12 ${f} : HTTP ${r.status}`);return r.text()}));
  const v12b64=v12texts.map(readExport).join("");if(v12b64.length!==15744)throw new Error(`Correctif v12 incomplet (${v12b64.length}/15744)`);html=applyOps(html,JSON.parse(decodeGzip(v12b64)));
- const v13files=["v13f-patch0.js","v13f-patch1.js"].map(f=>`https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/ab063b0c37e86a03b07707daa109aacf10f35da0/metrochain/v2/bundles/${f}`);
- const v13texts=await Promise.all(v13files.map(async f=>{const r=await fetch(f,{cache:"force-cache"});if(!r.ok)throw new Error(`v13 fixe ${f} : HTTP ${r.status}`);return r.text()}));
- const v13b64=v13texts.map(readExport).join("");if(v13b64.length!==10388)throw new Error(`Correctif v13 fixe incomplet (${v13b64.length}/10388)`);html=applyOps(html,JSON.parse(decodeGzip(v13b64)));
 
- // v14 stability pass: keep the visual redesign but remove permanent high-cost GPU/CPU work.
- html=html.replace("if(!coarse&&!reduce){","if(false&&!coarse&&!reduce){");
- html=html.replace("if(!reduce)raf=requestAnimationFrame(drawCanvas);","if(false&&!reduce)raf=requestAnimationFrame(drawCanvas);");
- const perf=`<style id="metrochain-perf-v14">
- #mc13-motion-stage,#mc13-cursor{display:none!important}
- body:not(.metro-live-active) .mode-card,body:not(.metro-live-active) .line-card,body:not(.metro-live-active) .data-card,body:not(.metro-live-active) .game-card,body:not(.metro-live-active) .question-card{will-change:auto!important}
- body:not(.metro-live-active) .hero-main:after,body:not(.metro-live-active) .section-head:after,body:not(.metro-live-active) .data-head:before,body:not(.metro-live-active) .game-card:before,body:not(.metro-live-active) .question-card:after,body:not(.metro-live-active) .progress-mini-bar i:after{animation:none!important}
- </style><script id="metrochain-perf-runtime-v14">(()=>{const FRAME=32;const mapVisible=()=>!document.getElementById('liveMap')?.classList.contains('hidden');if(typeof animateActualTrains==='function'){const base=animateActualTrains;let last=-Infinity;animateActualTrains=function(ts){if(!mapVisible()){liveAnimationId=null;return}const now=typeof ts==='number'?ts:performance.now();if(now-last<FRAME){liveAnimationId=requestAnimationFrame(animateActualTrains);return}last=now;return base()}}if(typeof animateSimulatedTrains==='function'){const base=animateSimulatedTrains;let last=-Infinity;animateSimulatedTrains=function(ts){if(!mapVisible()){liveAnimationId=null;return}const now=typeof ts==='number'?ts:performance.now();if(now-last<FRAME){liveAnimationId=requestAnimationFrame(animateSimulatedTrains);return}last=now;return base()}}})();<\/script>`;
- html=html.replace("</body>",perf+"</body>");
- if(!html||!html.includes("MétroChain")||!html.includes("movement_timeline")||!html.includes("buildTimelinePhases")||!html.includes("Départ prévu")||!html.includes("service_state")||!html.includes("metrochain-signal-v12")||!html.includes("mc-network")||!html.includes("journey-stop-details")||!html.includes("metrochain-motion-v13")||!html.includes("mc13-motion-stage")||!html.includes("metrochain-perf-v14")||html.includes("const cursorLoop")||html.includes("observe(body,{subtree:true")||html.includes("if(!reduce)raf=requestAnimationFrame(drawCanvas);"))throw new Error("Application v14 stabilité incomplète");
+ // v15 SAFE BUILD: remove the unstable v13 motion layer entirely and neutralize the v12 recursive observer.
+ html=html.replace(/observe\(body,\s*\{\s*subtree\s*:\s*true/g,"observe(body,{subtree:false");
+ const safe=`<style id="metrochain-safe-v15">
+ *,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}
+ </style><script id="metrochain-safe-runtime-v15">(()=>{document.addEventListener('click',e=>{if(e.target&&e.target.closest&&e.target.closest('header,nav,.topbar,.header,.main-nav')){try{if(typeof liveAnimationId!=='undefined'&&liveAnimationId){cancelAnimationFrame(liveAnimationId);liveAnimationId=null}}catch(_){}}},true)})();<\/script>`;
+ html=html.replace("</body>",safe+"</body>");
+ if(!html||!html.includes("MétroChain")||!html.includes("movement_timeline")||!html.includes("buildTimelinePhases")||!html.includes("Départ prévu")||!html.includes("service_state")||!html.includes("metrochain-signal-v12")||!html.includes("metrochain-safe-v15")||html.includes("metrochain-motion-v13")||html.includes("mc13-motion-stage")||/observe\(body,\s*\{\s*subtree\s*:\s*true/.test(html))throw new Error("Application v15 safe incomplète");
  document.open();document.write(html);document.close();
 }catch(e){console.error(e);document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><small>'+String(e&&e.message?e.message:e)+'</small><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:1px solid #17283e;border-radius:10px;background:#fff;font-weight:700">Réessayer</button></div></div>'}})();
 </script></body></html>
