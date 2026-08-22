@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>MétroChain</title><style>html,body{margin:0;height:100%;font-family:system-ui;background:#eaf0ff;color:#17283e}.boot{height:100%;display:grid;place-items:center}.card{background:white;padding:24px 28px;border:1px solid #17283e;border-radius:18px;box-shadow:5px 6px 0 #17283e;text-align:center}.dot{width:10px;height:10px;background:#48d9ad;border-radius:50%;display:inline-block;margin-right:8px;animation:p 1s infinite alternate}@keyframes p{to{opacity:.25}}</style></head><body><div class="boot"><div class="card"><div><span class="dot"></span><b>Chargement de MétroChain…</b></div><small>Carte live · itinéraires · incidents · jeux</small></div></div><script type="module">
-const A="https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/305fd5a7adb8decfb3448ca60723076b9170e601/metrochain/v2/chunks/";
-const parts=await Promise.all(Array.from({length:10},(_,i)=>import(A+`chunk${i}.js`)));
-const b64=parts.map(x=>x.default).join("");
-try{
- const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
- const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
- const html=await new Response(stream).text();
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>MétroChain</title><style>html,body{margin:0;height:100%;font-family:system-ui;background:#eaf0ff;color:#17283e}.boot{height:100%;display:grid;place-items:center;padding:18px;box-sizing:border-box}.card{background:white;padding:24px 28px;border:1px solid #17283e;border-radius:18px;box-shadow:5px 6px 0 #17283e;text-align:center;max-width:430px}.dot{width:10px;height:10px;background:#48d9ad;border-radius:50%;display:inline-block;margin-right:8px;animation:p 1s infinite alternate}@keyframes p{to{opacity:.25}}small{display:block;margin-top:8px;color:#64748b}</style></head><body><div class="boot"><div class="card"><div><span class="dot"></span><b>Chargement de MétroChain…</b></div><small>Carte live · itinéraires · incidents · jeux</small></div></div><script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako_inflate.min.js"></script><script>
+(async()=>{try{
+ if(!window.pako)throw new Error("Décompresseur indisponible");
+ const A="https://raw.githack.com/MagiZzzzz/elsys-nfc-provision/305fd5a7adb8decfb3448ca60723076b9170e601/metrochain/v2/chunks/";
+ const texts=await Promise.all(Array.from({length:10},async(_,i)=>{const r=await fetch(A+`chunk${i}.js`,{cache:"force-cache"});if(!r.ok)throw new Error(`Asset ${i} : HTTP ${r.status}`);return r.text()}));
+ const b64=texts.map((t,i)=>{const m=t.trim().match(/^export\s+default\s+(["'])([A-Za-z0-9+/=]+)\1;?$/);if(!m)throw new Error(`Asset ${i} invalide`);return m[2]}).join("");
+ const bin=atob(b64),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+ const html=window.pako.inflate(bytes,{to:"string"});
+ if(!html||!html.includes("MétroChain")||!html.includes("liveMap"))throw new Error("Application incomplète");
  document.open();document.write(html);document.close();
-}catch(e){document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><br><small>'+String(e)+'</small></div></div>';console.error(e)}
+}catch(e){console.error(e);document.body.innerHTML='<div class="boot"><div class="card"><b>Impossible de charger MétroChain</b><small>'+String(e&&e.message?e.message:e)+'</small><button onclick="location.reload()" style="margin-top:16px;padding:10px 16px;border:1px solid #17283e;border-radius:10px;background:#fff;font-weight:700">Réessayer</button></div></div>'}})();
 </script></body></html>
