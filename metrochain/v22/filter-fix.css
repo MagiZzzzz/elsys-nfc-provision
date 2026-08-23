@@ -1,0 +1,36 @@
+/* MetroChain v22.1 — filter/readability fixes. Never target descendants of #liveMetroMap. */
+:root{--mc221-line:#15283b;--mc221-card:#0b1724;--mc221-card2:#0f1d2c;--mc221-muted:#8298aa;--mc221-green:#49d5a6}
+
+/* Five network modes on their own full-width row: no clipped labels. */
+.mc22-network-toolbar{grid-template-columns:1fr minmax(190px,280px) auto!important;gap:9px 12px!important;padding:11px 14px!important}
+.mc22-mode-tabs{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-column:1/-1!important;gap:7px!important;overflow:visible!important;min-width:0!important}
+.mc22-mode-btn{min-width:0!important;width:100%!important;justify-content:center!important;padding:0 10px!important;gap:7px!important;min-height:37px!important;font-size:10px!important}
+.mc22-mode-btn>span:nth-child(2){display:block!important;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mc22-mode-btn small{flex:0 0 auto!important}
+.mc22-line-tools{grid-column:1/3!important;min-width:0!important;justify-content:flex-start!important}.mc22-line-search{width:100%!important;max-width:420px!important}.mc22-mode-status{grid-column:3!important}
+
+/* Replacement line picker. */
+#liveMap.mc22-network-mode #liveLineFilters.mc221-picker{display:block!important;max-height:none!important;overflow:visible!important;padding:0!important;flex:none!important}
+.mc221-picker-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 11px;margin-bottom:8px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.018))}
+.mc221-picker-head>div{min-width:0}.mc221-picker-head b{display:block;color:#f5f8fb;font:850 10px/1.2 system-ui;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mc221-picker-head small{display:block;margin-top:3px;color:#7f95a7;font:650 8px/1.25 system-ui}.mc221-picker-head .mc221-result-count{flex:0 0 auto;padding:5px 8px;border-radius:999px;background:rgba(73,213,166,.08);border:1px solid rgba(73,213,166,.18);color:#a7dbc8;font:850 8px/1 system-ui}
+.mc221-line-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:7px;max-height:142px;overflow:auto;padding:1px 3px 4px 1px;scrollbar-width:thin;scrollbar-color:#2a435a transparent}
+.mc221-line-choice{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;min-height:46px;padding:6px 8px;border:1px solid rgba(255,255,255,.07);border-radius:11px;background:rgba(255,255,255,.025);color:#dbe6ee;cursor:pointer;text-align:left;transition:border-color .16s ease,background .16s ease,transform .16s ease,box-shadow .16s ease}
+.mc221-line-choice:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.045)}
+.mc221-line-choice.active{border-color:rgba(73,213,166,.58);background:rgba(73,213,166,.08);box-shadow:0 0 0 2px rgba(73,213,166,.07) inset}
+.mc221-line-choice.active:after{content:'✓';position:absolute;right:5px;top:4px;color:#8df2ca;font:900 8px/1 system-ui}
+.mc221-line-code{display:grid;place-items:center;min-width:34px;height:30px;padding:0 7px;border-radius:9px;font:950 10px/1 system-ui;box-shadow:0 3px 12px rgba(0,0,0,.18);white-space:nowrap}
+.mc221-line-meta{display:block;min-width:0}.mc221-line-meta b{display:block;color:#eef4f8;font:800 8.5px/1.2 system-ui;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mc221-line-meta small{display:block;margin-top:3px;color:#7890a2;font:650 7.5px/1.2 system-ui;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc221-picker-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;color:#70879a;font:650 7.7px/1.3 system-ui}.mc221-picker-foot strong{color:#9db0bf;font-weight:800}
+.mc221-empty{padding:14px 12px;border:1px dashed rgba(255,255,255,.11);border-radius:12px;color:#8aa0b1;text-align:center;font:700 9px/1.4 system-ui;background:rgba(255,255,255,.018)}
+
+/* Make the network/all buttons clearer and keep the toolbar stable. */
+#liveMap.mc22-network-mode #liveAllLines{min-width:max-content!important;padding-inline:12px!important}
+#liveMap.mc22-network-mode #liveAllLines.active{background:#15324a!important;color:#fff!important;border-color:#31536f!important}
+#liveMap.mc22-network-mode .live-toolbar{overflow:visible!important}
+.mc221-pending{opacity:.62!important}
+
+/* Incident panel never keeps the previous mode on screen while a new one loads. */
+.mc221-incident-loading{display:grid;place-items:center;min-height:118px;margin-top:10px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.02);color:#8298aa;text-align:center;font:700 9px/1.5 system-ui}.mc221-incident-loading i{display:block;width:22px;height:22px;margin:0 auto 8px;border:2px solid rgba(255,255,255,.1);border-top-color:#49d5a6;border-radius:50%;animation:mc221spin .8s linear infinite}@keyframes mc221spin{to{transform:rotate(360deg)}}
+
+@media(max-width:1180px){.mc22-network-toolbar{grid-template-columns:1fr!important}.mc22-mode-tabs{grid-column:1!important}.mc22-line-tools{grid-column:1!important;width:100%!important}.mc22-line-search{max-width:none!important}.mc22-mode-status{grid-column:1!important;justify-self:start!important;text-align:left!important}.mc221-line-grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr))}}
+@media(max-width:760px){.mc22-mode-tabs{grid-template-columns:repeat(5,minmax(72px,1fr))!important;overflow-x:auto!important;padding-bottom:2px}.mc22-mode-btn{padding:0 7px!important}.mc22-mode-btn small{display:none!important}.mc22-mode-icon{width:20px!important;height:20px!important}.mc221-line-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:178px}.mc221-picker-head{align-items:flex-start}.mc221-picker-foot{display:block}.mc221-picker-foot span{display:block;margin-top:3px}}
