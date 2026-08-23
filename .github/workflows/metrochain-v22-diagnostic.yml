@@ -22,7 +22,7 @@ jobs:
           npx playwright install --with-deps chromium >/dev/null
       - name: Serve repository
         run: python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/mc22-http.log 2>&1 &
-      - name: Inspect current runtime
+      - name: Inspect current runtime and backend modes
         run: |
           cat > diag.mjs <<'EOF'
           import { chromium } from 'playwright';
@@ -34,28 +34,32 @@ jobs:
           await page.waitForTimeout(12000);
           const frame=page.frames().find(f=>/\/metrochain\/v2\/index\.html/.test(f.url()));
           if(!frame) throw new Error('child frame missing');
-          const data=await frame.evaluate(()=>{
-            const keys=Object.keys(window).filter(k=>/map|leaf|train|metro|live|prim|line|route|stop|station|vehicle|traffic/i.test(k));
-            const summary={};
-            for(const k of keys){try{const v=window[k]; const t=typeof v; if(t==='function') summary[k]='function'; else if(v&&typeof v==='object') summary[k]=Array.isArray(v)?`array(${v.length})`:(v.constructor?.name||'object'); else summary[k]=String(v).slice(0,120)}catch{}}
-            const live=document.querySelector('#liveMap');
-            const map=document.querySelector('#liveMetroMap');
-            return {
-              keys:summary,
-              liveHTML:live?.innerHTML?.slice(0,30000)||'',
-              mapClass:map?.className||'',
-              mapChildren:[...(map?.children||[])].map(x=>({tag:x.tagName,cls:x.className,id:x.id})),
-              scripts:[...document.scripts].map(s=>s.src||s.id||'inline').filter(Boolean),
-              styles:[...document.querySelectorAll('style,link[rel=stylesheet]')].map(s=>s.id||s.href||'style').filter(Boolean)
+          const data=await frame.evaluate(async()=>{
+            const funcs={};
+            for(const k of ['loadLiveMetroData','refreshVehicles','renderLiveNetwork','renderLiveFilters','setupLiveMap','loadTraffic']){try{funcs[k]=String(window[k]).slice(0,9000)}catch{}}
+            const leafletInfo=(()=>{try{const l=window.leaflet;return {ctor:l?.constructor?.name,keys:Object.keys(l||{}).slice(0,120),center:l?.getCenter?.(),zoom:l?.getZoom?.(),layers:l?._layers?Object.keys(l._layers).length:null}}catch(e){return {error:String(e)}}})();
+            const endpoint='https://mwqesmycduqkglpgldrr.supabase.co/functions/v1/idfm-traffic';
+            const modes=['metro','rer','train','transilien','tram','bus','all'];
+            const modeResults={};
+            for(const mode of modes){
+              try{
+                const r=await fetch(endpoint+'?mode='+encodeURIComponent(mode),{cache:'no-store'});
+                const txt=await r.text();
+                let parsed=null;try{parsed=JSON.parse(txt)}catch{}
+                const summarize=(v)=>{
+                  if(Array.isArray(v))return {type:'array',len:v.length,first:v[0]?Object.keys(v[0]).slice(0,25):[]};
+                  if(v&&typeof v==='object')return {type:'object',keys:Object.keys(v).slice(0,40),arrays:Object.fromEntries(Object.entries(v).filter(([,x])=>Array.isArray(x)).slice(0,20).map(([k,x])=>[k,{len:x.length,first:x[0]?Object.keys(x[0]).slice(0,20):[]}]))};
+                  return {type:typeof v,value:String(v).slice(0,200)};
+                };
+                modeResults[mode]={status:r.status,ok:r.ok,summary:summarize(parsed??txt),sample:parsed?JSON.stringify(parsed).slice(0,1800):txt.slice(0,1800)};
+              }catch(e){modeResults[mode]={error:String(e)}}
             }
+            return {funcs,leafletInfo,modeResults};
           });
           console.log('REQUESTS\n'+JSON.stringify([...new Set(req)],null,2));
-          console.log('GLOBALS\n'+JSON.stringify(data.keys,null,2));
-          console.log('MAPCLASS '+data.mapClass);
-          console.log('MAPCHILDREN\n'+JSON.stringify(data.mapChildren,null,2));
-          console.log('SCRIPTS\n'+JSON.stringify(data.scripts,null,2));
-          console.log('STYLES\n'+JSON.stringify(data.styles,null,2));
-          console.log('LIVEHTML_START\n'+data.liveHTML+'\nLIVEHTML_END');
+          console.log('LEAFLET\n'+JSON.stringify(data.leafletInfo,null,2));
+          console.log('MODE_RESULTS\n'+JSON.stringify(data.modeResults,null,2));
+          for(const [k,v] of Object.entries(data.funcs)) console.log('FUNCTION_'+k+'\n'+v+'\nEND_FUNCTION_'+k);
           await browser.close();
           EOF
           node diag.mjs
