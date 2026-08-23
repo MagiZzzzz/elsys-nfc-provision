@@ -1,0 +1,125 @@
+name: MetroChain v22 Performance Smoke
+on:
+  pull_request:
+    branches: [metrochain-hosting]
+    paths:
+      - 'metrochain/v22/**'
+      - 'metrochain/v21/**'
+      - 'metrochain/v20/**'
+      - 'metrochain/v2/**'
+      - '.github/workflows/metrochain-v22-perf-smoke.yml'
+permissions:
+  contents: read
+jobs:
+  perf-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Serve repository
+        run: python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/mc22-perf-http.log 2>&1 &
+      - name: Validate responsiveness and rendering cost
+        run: |
+          cat > mc22-perf-smoke.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import fs from 'fs';
+
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:1680,height:1050},deviceScaleFactor:1});
+          const errors=[];
+          page.on('pageerror',e=>errors.push(String(e?.stack||e)));
+          page.on('console',m=>{if(m.type()==='error') errors.push('console: '+m.text())});
+
+          await page.goto('http://127.0.0.1:8000/metrochain/v22/index.html?perf='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+          await page.waitForFunction(()=>{const f=document.querySelector('#appFrame');try{return !!(f?.contentWindow?.__MC22_THEME__&&f.contentWindow?.__MC22_PERF__?.installs===1)}catch{return false}},null,{timeout:60000});
+          const frame=page.frames().find(f=>/\/metrochain\/v2\/index\.html/.test(f.url()));
+          if(!frame) throw new Error('child frame missing');
+          await frame.waitForFunction(()=>document.querySelectorAll('#liveMetroMap canvas').length>0,null,{timeout:60000});
+
+          await frame.evaluate(()=>{
+            window.__mcPerfHeartbeat=0;
+            window.__mcPerfLongTasks=[];
+            window.__mcPerfTimer=setInterval(()=>window.__mcPerfHeartbeat++,20);
+            try{
+              window.__mcPerfObserver=new PerformanceObserver(list=>{
+                for(const e of list.getEntries()) window.__mcPerfLongTasks.push(Math.round(e.duration));
+              });
+              window.__mcPerfObserver.observe({entryTypes:['longtask']});
+            }catch{}
+          });
+
+          const modes=['metro','rer','transilien','tram','bus'];
+          const results={};
+          fs.mkdirSync('mc22-perf-shots',{recursive:true});
+
+          for(const mode of modes){
+            const before=await frame.evaluate(()=>window.__mcPerfHeartbeat);
+            await frame.locator(`.mc22-mode-btn[data-mode="${mode}"]`).click();
+            if(mode!=='metro'){
+              await frame.waitForFunction(m=>{try{return eval('liveFeed?.mode')===m&&!document.querySelector('.mc22-mode-status')?.classList.contains('loading')}catch{return false}},mode,{timeout:70000});
+            }else{
+              await frame.waitForFunction(()=>!document.querySelector('.mc22-mode-status')?.classList.contains('loading'),null,{timeout:70000});
+            }
+            await page.waitForTimeout(900);
+
+            if(mode!=='metro'){
+              await frame.evaluate(()=>{
+                for(let i=0;i<8;i++) renderLiveFilters();
+                for(let i=0;i<8;i++) renderLineStats();
+                for(let i=0;i<12;i++) renderLiveStations();
+              });
+              await page.waitForTimeout(250);
+            }
+
+            const r=await frame.evaluate((m)=>({
+              mode:m,
+              hb:window.__mcPerfHeartbeat,
+              metrics:{...(window.__MC22_PERF__||{})},
+              lines:eval('liveFeed?.lines?.length||0'),
+              stations:eval('liveFeed?.stations?.length||0'),
+              vehicles:eval('liveFeed?.vehicles?.length||0'),
+              canvases:document.querySelectorAll('#liveMetroMap canvas').length,
+              trainCanvas:document.querySelectorAll('#liveMetroMap .metro-train-canvas').length,
+              longTasks:(window.__mcPerfLongTasks||[]).slice(-30),
+              errors:window.__MC_ERRORS__||[]
+            }),mode);
+            r.heartbeatDelta=r.hb-before;
+            results[mode]=r;
+            console.log('PERF '+JSON.stringify(r));
+
+            if(r.heartbeatDelta<12) throw new Error(`event loop stalled in ${mode}: heartbeat ${r.heartbeatDelta}`);
+            if(r.canvases<1||r.trainCanvas<1) throw new Error(`map canvas missing in ${mode}`);
+            if(r.lines<1) throw new Error(`no lines in ${mode}`);
+            if(mode!=='metro'&&r.stations<1) throw new Error(`no stations in ${mode}`);
+            if(r.errors.length) throw new Error(`runtime errors in ${mode}: ${JSON.stringify(r.errors)}`);
+            if(mode!=='metro'){
+              if(r.metrics.installs!==1) throw new Error(`performance guard missing in ${mode}`);
+              if(r.metrics.filterMs>180) throw new Error(`filter render too slow in ${mode}: ${r.metrics.filterMs}ms`);
+              if(r.metrics.statsMs>180) throw new Error(`stats render too slow in ${mode}: ${r.metrics.statsMs}ms`);
+              if(r.metrics.stationMs>420) throw new Error(`station render too slow in ${mode}: ${r.metrics.stationMs}ms`);
+            }
+            const maxLong=Math.max(0,...r.longTasks);
+            if(maxLong>900) throw new Error(`long task >900ms in ${mode}: ${maxLong}ms`);
+            await page.screenshot({path:`mc22-perf-shots/${mode}.png`,fullPage:false});
+          }
+
+          console.log('RESULTS '+JSON.stringify(results));
+          console.log('PAGE_ERRORS '+JSON.stringify(errors));
+          if(errors.length) throw new Error('JS/console errors: '+JSON.stringify(errors));
+          await browser.close();
+          EOF
+          node mc22-perf-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: metrochain-v22-perf-screenshots
+          path: mc22-perf-shots
+          if-no-files-found: ignore
