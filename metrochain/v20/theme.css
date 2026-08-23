@@ -8,6 +8,7 @@ main{max-width:1680px!important}
 
 /* Live screen — only around the engine. */
 #liveMap{display:grid!important;grid-template-columns:260px minmax(680px,1fr) 310px!important;gap:16px!important;align-items:start!important;max-width:1760px!important;padding:18px 18px 42px!important}
+#liveMap.hidden{display:none!important}
 #liveMap>.live-map-shell{grid-column:2!important;grid-row:1 / span 4!important;min-width:0!important;border:1px solid var(--mc20-border)!important;background:#09131e!important;box-shadow:0 30px 90px rgba(0,0,0,.28)!important}
 #liveMap>.mc20-left-rail{grid-column:1;grid-row:1 / span 4;display:flex;flex-direction:column;gap:14px}
 #liveMap>.mc20-right-rail{grid-column:3;grid-row:1 / span 4;display:flex;flex-direction:column;gap:14px}
