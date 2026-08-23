@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
   if(window.__MC223_MOTION_STATUS__) return;
-  window.__MC223_MOTION_STATUS__='v22.3-motion-fallback';
+  window.__MC223_MOTION_STATUS__='v22.5-motion-status-safe';
 
   const LABELS={metro:'Métro',rer:'RER',transilien:'Transilien',tram:'Tram',bus:'Bus'};
   const getFeed=()=>{try{return eval('liveFeed')}catch{return null}};
@@ -20,6 +20,19 @@
     return el;
   }
 
+  function setModeStatusText(text){
+    const s=document.querySelector('.mc22-mode-status');
+    if(!s||s.classList.contains('loading')) return;
+    let span=s.querySelector('span');
+    if(!span){
+      s.replaceChildren();
+      s.appendChild(document.createElement('i'));
+      span=document.createElement('span');
+      s.appendChild(span);
+    }
+    span.textContent=text;
+  }
+
   function render(){
     const feed=getFeed(),mode=activeMode(),el=ensureBadge();
     if(!el||!feed)return;
@@ -32,8 +45,7 @@
       el.style.color='#ffd98a';
       el.innerHTML='<span style="width:7px;height:7px;border-radius:50%;background:#ffbd49;box-shadow:0 0 0 4px rgba(255,189,73,.12)"></span><strong>SIMULATION DE SECOURS</strong><span style="opacity:.8">'+LABELS[mode]+' · '+vehicles+' véhicules</span>';
       el.title=feed.simulation_note||'PRIM est momentanément indisponible. Les véhicules sont animés sur les vrais tracés/arrêts à partir du dernier snapshot valide.';
-      const s=document.querySelector('.mc22-mode-status');
-      if(s&&!s.classList.contains('loading')) s.textContent=(lines?lines+' lignes · ':'')+vehicles+' véhicules · simulation de secours';
+      setModeStatusText((lines?lines+' lignes · ':'')+vehicles+' véhicules · simulation de secours');
     }else{
       el.style.borderColor='rgba(73,213,166,.28)';
       el.style.background='rgba(8,41,33,.82)';
