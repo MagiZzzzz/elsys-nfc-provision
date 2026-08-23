@@ -1,0 +1,51 @@
+/* MetroChain v21 — immersive transitions, readable itinerary, side incidents. Never style descendants of #liveMetroMap. */
+:root{--mc21-gold:#e6b968;--mc21-ink:#06101a;--mc21-panel:#0b1724;--mc21-panel2:#101f2f;--mc21-line:rgba(255,255,255,.09);--mc21-text:#f7f9fb;--mc21-muted:#9cb0c1;--mc21-green:#47d4a5;--mc21-orange:#f0a94b;--mc21-red:#ef6262;--mc21-ease:cubic-bezier(.16,1,.3,1)}
+body.mc21-ready{background:#050b12!important}
+body.mc21-ready>.app{position:relative;z-index:2;background:transparent!important}
+.mc21-ambient{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:#050b12}
+.mc21-ambient-photo{position:absolute;inset:-6%;background-size:cover;background-position:center;filter:blur(3px) saturate(.8) brightness(.28);opacity:.34;transform:scale(1.06);animation:mc21Drift 24s ease-in-out infinite alternate}
+.mc21-ambient:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,9,15,.62),rgba(4,9,15,.88) 45%,rgba(4,9,15,.96)),radial-gradient(circle at 50% 0,rgba(78,145,205,.16),transparent 46%)}
+.mc21-ambient-lights{position:absolute;inset:0;opacity:.22;background:linear-gradient(110deg,transparent 0 30%,rgba(255,255,255,.12) 38%,transparent 45% 67%,rgba(230,185,104,.1) 74%,transparent 82%);background-size:180% 100%;animation:mc21Lights 12s linear infinite}
+@keyframes mc21Drift{from{transform:scale(1.05) translate3d(-1.4%,-.6%,0)}to{transform:scale(1.11) translate3d(1.5%,.8%,0)}}
+@keyframes mc21Lights{from{background-position:160% 0}to{background-position:-80% 0}}
+
+/* cinematic page transition */
+#mc21Transition{position:fixed;inset:0;z-index:99999;pointer-events:none;opacity:0;visibility:hidden;overflow:hidden;background:#03080d}
+#mc21Transition.play{visibility:visible;animation:mc21Curtain .92s var(--mc21-ease) both}
+.mc21-transition-bg{position:absolute;inset:-4%;background-size:cover;background-position:center;filter:brightness(.28) saturate(.72);transform:scale(1.08)}
+.mc21-transition-bg:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(2,6,10,.92),rgba(2,6,10,.28) 46%,rgba(2,6,10,.86))}
+.mc21-transition-train{position:absolute;top:18%;bottom:13%;left:100%;width:min(940px,72vw);border-radius:24px;background-size:cover;background-position:center;box-shadow:-60px 0 120px rgba(134,191,244,.18),0 30px 90px #000b;filter:saturate(.92) contrast(1.07);animation:mc21TrainPass .92s cubic-bezier(.3,.02,.2,1) both}
+.mc21-transition-train:after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,rgba(255,255,255,.06),transparent 28%,rgba(120,184,240,.12) 70%,transparent);mix-blend-mode:screen}
+.mc21-transition-label{position:absolute;left:7vw;bottom:9vh;z-index:3;color:#fff;text-transform:uppercase;letter-spacing:.14em;font:800 12px/1 system-ui}
+.mc21-transition-label b{display:block;margin-top:8px;color:#fff;font:700 clamp(32px,5vw,64px)/.95 Georgia,serif;letter-spacing:-.045em;text-transform:none}
+@keyframes mc21Curtain{0%{opacity:0}12%{opacity:1}78%{opacity:1}100%{opacity:0}}
+@keyframes mc21TrainPass{0%{left:105%;transform:skewX(-2deg)}100%{left:-86%;transform:skewX(1deg)}}
+
+/* itinerary redesign */
+#liveMap .journey-box.mc21-journey{position:relative!important;padding:20px!important;margin:0!important;border:1px solid rgba(113,183,236,.16)!important;border-radius:18px!important;background:linear-gradient(180deg,rgba(14,29,44,.98),rgba(8,18,29,.98))!important;box-shadow:0 18px 48px rgba(0,0,0,.2)!important;overflow:visible!important}
+.mc21-route-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.mc21-route-title{display:flex;align-items:center;gap:11px}.mc21-route-icon{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(113,183,236,.18),rgba(138,108,246,.18));border:1px solid rgba(113,183,236,.24);font-size:18px}
+.mc21-route-head h3{margin:0!important;color:#fff!important;font:800 16px/1.15 system-ui!important}.mc21-route-head p{margin:5px 0 0!important;color:#8fa6b9!important;font-size:10px!important;line-height:1.35!important}.mc21-route-source{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border-radius:999px;background:rgba(71,212,165,.08);border:1px solid rgba(71,212,165,.18);color:#79deb9;font:800 9px/1 system-ui;white-space:nowrap}
+#liveMap .journey-box.mc21-journey .place-field{position:relative!important;padding:10px 12px 12px!important;border:1px solid rgba(255,255,255,.08)!important;border-radius:14px!important;background:rgba(255,255,255,.025)!important;min-width:0!important}
+#liveMap .journey-box.mc21-journey .place-field:focus-within{border-color:rgba(113,183,236,.46)!important;box-shadow:0 0 0 3px rgba(113,183,236,.08)!important}
+#liveMap .journey-box.mc21-journey .place-field label,#liveMap .journey-box.mc21-journey .place-field small{color:#82a0b7!important;font-size:9px!important;font-weight:800!important;letter-spacing:.05em!important;text-transform:uppercase!important}
+#liveMap .journey-box.mc21-journey .place-field input{height:46px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;color:#fff!important;font-size:14px!important;font-weight:700!important;min-width:0!important}
+#liveMap .journey-box.mc21-journey .place-field input::placeholder{color:#70869a!important}
+.mc21-route-guide{display:flex;align-items:center;gap:9px;margin-top:13px;padding:10px 12px;border-radius:12px;background:rgba(230,185,104,.055);border:1px solid rgba(230,185,104,.13);color:#b7c4cf;font-size:10px;line-height:1.4}.mc21-route-guide i{width:7px;height:7px;border-radius:50%;background:var(--mc21-gold);box-shadow:0 0 14px rgba(230,185,104,.5);flex:0 0 auto}
+#liveMap .journey-box.mc21-journey button{min-height:42px!important;border-radius:12px!important;font-weight:800!important}
+
+/* incident ribbon on the right */
+.mc21-incidents{order:-20;position:sticky;top:90px;border-color:rgba(239,98,98,.14)!important;background:linear-gradient(180deg,rgba(20,29,40,.99),rgba(10,18,28,.99))!important}
+.mc21-incidents .mc21-incident-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.mc21-incidents h3{margin:0;color:#fff;font:800 14px/1.1 system-ui}.mc21-live-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border-radius:999px;background:rgba(71,212,165,.08);border:1px solid rgba(71,212,165,.18);color:#73dfb8;font:800 9px/1 system-ui}.mc21-live-badge:before{content:"";width:6px;height:6px;border-radius:50%;background:#47d4a5;box-shadow:0 0 0 0 rgba(71,212,165,.5);animation:mc21Pulse 1.8s ease-out infinite}
+.mc21-global-status{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center;padding:11px 0 12px;border-bottom:1px solid rgba(255,255,255,.07)}.mc21-status-dot{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;font-weight:900;color:#fff}.mc21-global-status b{display:block;color:#fff;font-size:11px}.mc21-global-status span{display:block;margin-top:3px;color:#8fa4b6;font-size:9px;line-height:1.35}
+.mc21-incident-list{display:grid;gap:8px;padding-top:10px}.mc21-incident-item{display:grid;grid-template-columns:6px 1fr;gap:10px;padding:9px 10px;border-radius:11px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.055)}.mc21-incident-bar{border-radius:999px;background:var(--mc21-orange)}.mc21-incident-item b{display:block;color:#f3f6f8;font-size:10px}.mc21-incident-item span{display:block;margin-top:3px;color:#91a5b6;font-size:9px;line-height:1.4}.mc21-empty{padding:12px;border-radius:11px;background:rgba(71,212,165,.055);border:1px solid rgba(71,212,165,.12);color:#a9c9bd;font-size:9px;line-height:1.45}.mc21-incident-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;color:#6f8597;font-size:8px}.mc21-incident-foot a{color:#8bc2e7;text-decoration:none;font-weight:800}
+@keyframes mc21Pulse{to{box-shadow:0 0 0 10px rgba(71,212,165,0)}}
+
+/* subtle polish around the existing app */
+.main-nav{backdrop-filter:blur(18px)!important}.nav-btn{transition:transform .25s var(--mc21-ease),background .25s ease,border-color .25s ease!important}.nav-btn:hover{transform:translateY(-2px)}
+#liveMap>.live-map-shell{animation:mc21PanelIn .7s var(--mc21-ease) both}.mc20-card{backdrop-filter:blur(10px)}
+main:not(#liveMap)>.mc20-banner{box-shadow:0 30px 90px rgba(0,0,0,.32)!important}
+@keyframes mc21PanelIn{from{opacity:0;transform:translateY(18px) scale(.992)}to{opacity:1;transform:none}}
+
+@media(max-width:1280px){.mc21-incidents{position:relative;top:auto}.mc21-transition-train{width:80vw}}
+@media(max-width:720px){.mc21-route-head{flex-direction:column}.mc21-route-source{align-self:flex-start}.mc21-transition-label{left:22px;bottom:44px}.mc21-transition-train{top:25%;bottom:20%;width:110vw}.mc21-ambient-photo{opacity:.22}}
