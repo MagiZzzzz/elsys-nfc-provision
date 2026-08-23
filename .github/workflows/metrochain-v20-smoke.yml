@@ -1,0 +1,71 @@
+name: MetroChain v20 Chromium smoke
+on:
+  pull_request:
+    branches: [metrochain-hosting]
+    paths:
+      - 'metrochain/v20/**'
+      - 'metrochain/v18/**'
+      - 'metrochain/v2/**'
+      - '.github/workflows/metrochain-v20-smoke.yml'
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Serve repository
+        run: python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/mc20-http.log 2>&1 &
+      - name: Validate v20 UI and preserve live map
+        run: |
+          cat > mc20-smoke.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import fs from 'fs';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:1600,height:1000},deviceScaleFactor:1});
+          const errors=[]; page.on('pageerror',e=>errors.push(String(e?.stack||e)));
+          await page.goto('http://127.0.0.1:8000/metrochain/v20/index.html?ci='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+          await page.waitForFunction(()=>{const f=document.querySelector('#appFrame');try{return !!(f?.contentWindow?.__MC20_THEME__&&f.contentDocument.querySelector('.mc20-left-rail')&&f.contentDocument.querySelector('.mc20-right-rail'))}catch{return false}},null,{timeout:60000});
+          const frame=page.frames().find(f=>/\/metrochain\/v2\/index\.html/.test(f.url()));
+          if(!frame) throw new Error('MetroChain child frame missing');
+          await frame.evaluate(()=>{window.__mc20hb=0;window.__mc20timer=setInterval(()=>window.__mc20hb++,25)});
+          const base=await frame.evaluate(()=>({canvas:document.querySelectorAll('#liveMetroMap canvas').length,trains:document.querySelectorAll('#liveMetroMap .metro-train-canvas').length,leak:document.querySelectorAll('#liveMetroMap [class*="mc20"],#liveMetroMap [id*="mc20"]').length,stats:[...document.querySelectorAll('.mc20-stat strong')].map(x=>x.textContent.trim()),video:!!document.querySelector('.mc20-video iframe')}));
+          console.log('MAP_BASE '+JSON.stringify(base));
+          if(base.canvas<1) throw new Error('Live map canvas missing');
+          if(base.leak!==0) throw new Error('v20 DOM leaked inside live map');
+          if(!base.video) throw new Error('Official video embed missing');
+          if(!base.stats.includes('16')||!base.stats.includes('302')||!base.stats.includes('206 km')) throw new Error('Verified network stats missing');
+          fs.mkdirSync('mc20-shots',{recursive:true});
+          const nav=frame.locator('.nav-btn:visible'); const n=await nav.count();
+          for(let i=0;i<n;i++){
+            const b=nav.nth(i),label=(await b.textContent()).trim(),before=await frame.evaluate(()=>window.__mc20hb);
+            await b.click({timeout:5000}); await page.waitForTimeout(850);
+            const s=await frame.evaluate(()=>({hb:window.__mc20hb,visible:[...document.querySelectorAll('main')].filter(m=>!m.classList.contains('hidden')&&getComputedStyle(m).display!=='none').map(m=>m.id),canvas:document.querySelectorAll('#liveMetroMap canvas').length,leak:document.querySelectorAll('#liveMetroMap [class*="mc20"],#liveMetroMap [id*="mc20"]').length,theme:window.__MC20_THEME__}));
+            console.log('PAGE '+JSON.stringify({label,delta:s.hb-before,...s}));
+            if(s.hb-before<10) throw new Error('Event loop stalled on '+label);
+            if(s.visible.length!==1) throw new Error('Invalid visible main on '+label);
+            if(s.leak!==0) throw new Error('v20 leaked inside live map on '+label);
+            const safe=label.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+            await page.screenshot({path:`mc20-shots/${String(i+1).padStart(2,'0')}-${safe||'page'}.png`,fullPage:false});
+          }
+          const end=await frame.evaluate(()=>({canvas:document.querySelectorAll('#liveMetroMap canvas').length,trains:document.querySelectorAll('#liveMetroMap .metro-train-canvas').length,errors:window.__MC_ERRORS__||[]}));
+          console.log('MAP_END '+JSON.stringify(end)); console.log('PAGE_ERRORS '+JSON.stringify(errors));
+          if(end.canvas<base.canvas) throw new Error('Live map canvas regressed');
+          if(errors.length||end.errors.length) throw new Error('JS errors detected');
+          await browser.close();
+          EOF
+          node mc20-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: metrochain-v20-screenshots
+          path: mc20-shots
+          if-no-files-found: ignore
