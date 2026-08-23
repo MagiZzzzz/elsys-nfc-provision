@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
   if(window.__MC223_MOTION_STATUS__) return;
-  window.__MC223_MOTION_STATUS__='v22.5-motion-status-safe';
+  window.__MC223_MOTION_STATUS__='v22.7-motion-truth';
 
   const LABELS={metro:'Métro',rer:'RER',transilien:'Transilien',tram:'Tram',bus:'Bus'};
   const getFeed=()=>{try{return eval('liveFeed')}catch{return null}};
@@ -33,19 +33,36 @@
     span.textContent=text;
   }
 
+  function ageLabel(seconds){
+    const s=Math.max(0,Math.round(Number(seconds)||0));
+    if(s<60)return s+' s';
+    if(s<3600)return Math.floor(s/60)+' min';
+    const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);
+    return h+' h'+(m?' '+m+' min':'');
+  }
+
+  function sourceAge(feed){
+    const fromVehicles=(feed?.vehicles||[]).map(v=>Number(v?.source_age_seconds)).filter(Number.isFinite);
+    if(fromVehicles.length)return Math.max(...fromVehicles);
+    const ts=Date.parse(feed?.source_response_timestamp||'');
+    return Number.isFinite(ts)?Math.max(0,(Date.now()-ts)/1000):null;
+  }
+
   function render(){
     const feed=getFeed(),mode=activeMode(),el=ensureBadge();
     if(!el||!feed)return;
-    const simulated=!!(feed.simulation||feed.stale||feed.degraded||feed.source_mode==='cached-simulated'||feed.source_mode==='static-simulated-fallback');
+    const projectedVehicles=(feed?.vehicles||[]).some(v=>v?.simulation||v?.stale_projection||v?.projection_kind==='stale_simulated');
+    const simulated=!!(feed.simulation||feed.stale||feed.degraded||feed.source_mode==='cached-simulated'||feed.source_mode==='static-simulated-fallback'||projectedVehicles);
     const vehicles=Number(feed?.counts?.vehicles??feed?.vehicles?.length??0);
     const lines=Number(feed?.counts?.lines??feed?.lines?.length??0);
+    const age=sourceAge(feed),ageText=age==null?'âge inconnu':ageLabel(age);
     if(simulated){
       el.style.borderColor='rgba(255,190,72,.42)';
       el.style.background='rgba(63,42,10,.88)';
       el.style.color='#ffd98a';
-      el.innerHTML='<span style="width:7px;height:7px;border-radius:50%;background:#ffbd49;box-shadow:0 0 0 4px rgba(255,189,73,.12)"></span><strong>SIMULATION DE SECOURS</strong><span style="opacity:.8">'+LABELS[mode]+' · '+vehicles+' véhicules</span>';
-      el.title=feed.simulation_note||'PRIM est momentanément indisponible. Les véhicules sont animés sur les vrais tracés/arrêts à partir du dernier snapshot valide.';
-      setModeStatusText((lines?lines+' lignes · ':'')+vehicles+' véhicules · simulation de secours');
+      el.innerHTML='<span style="width:7px;height:7px;border-radius:50%;background:#ffbd49;box-shadow:0 0 0 4px rgba(255,189,73,.12)"></span><strong>PROJECTION DE SECOURS</strong><span style="opacity:.8">'+LABELS[mode]+' · PRIM '+ageText+'</span>';
+      el.title=(feed.simulation_note||'Le flux PRIM frais est indisponible. MetroChain projette les véhicules sur les vrais tracés et arrêts à partir du dernier snapshot valide.')+' Dernier snapshot : '+ageText+'.';
+      setModeStatusText((lines?lines+' lignes · ':'')+vehicles+' véhicules · projection de secours · PRIM '+ageText);
     }else{
       el.style.borderColor='rgba(73,213,166,.28)';
       el.style.background='rgba(8,41,33,.82)';
