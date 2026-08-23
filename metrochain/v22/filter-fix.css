@@ -1,13 +1,13 @@
 /* MetroChain v22.1 — filter/readability fixes. Never target descendants of #liveMetroMap. */
 :root{--mc221-line:#15283b;--mc221-card:#0b1724;--mc221-card2:#0f1d2c;--mc221-muted:#8298aa;--mc221-green:#49d5a6}
 
-/* Always keep the five network modes visible. */
-.mc22-network-toolbar{grid-template-columns:1fr minmax(190px,280px) auto!important;gap:10px 12px!important;padding:12px 14px!important}
-.mc22-mode-tabs{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important;overflow:visible!important;min-width:0!important}
-.mc22-mode-btn{min-width:0!important;width:100%!important;justify-content:center!important;padding:0 8px!important;gap:6px!important}
-.mc22-mode-btn>span:nth-child(2){overflow:hidden;text-overflow:ellipsis}
+/* Five network modes on their own full-width row: no clipped labels. */
+.mc22-network-toolbar{grid-template-columns:1fr minmax(190px,280px) auto!important;gap:9px 12px!important;padding:11px 14px!important}
+.mc22-mode-tabs{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-column:1/-1!important;gap:7px!important;overflow:visible!important;min-width:0!important}
+.mc22-mode-btn{min-width:0!important;width:100%!important;justify-content:center!important;padding:0 10px!important;gap:7px!important;min-height:37px!important;font-size:10px!important}
+.mc22-mode-btn>span:nth-child(2){display:block!important;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .mc22-mode-btn small{flex:0 0 auto!important}
-.mc22-line-tools{min-width:0!important}.mc22-line-search{width:100%!important;max-width:none!important}
+.mc22-line-tools{grid-column:1/3!important;min-width:0!important;justify-content:flex-start!important}.mc22-line-search{width:100%!important;max-width:420px!important}.mc22-mode-status{grid-column:3!important}
 
 /* Replacement line picker. */
 #liveMap.mc22-network-mode #liveLineFilters.mc221-picker{display:block!important;max-height:none!important;overflow:visible!important;padding:0!important;flex:none!important}
@@ -32,5 +32,5 @@
 /* Incident panel never keeps the previous mode on screen while a new one loads. */
 .mc221-incident-loading{display:grid;place-items:center;min-height:118px;margin-top:10px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.02);color:#8298aa;text-align:center;font:700 9px/1.5 system-ui}.mc221-incident-loading i{display:block;width:22px;height:22px;margin:0 auto 8px;border:2px solid rgba(255,255,255,.1);border-top-color:#49d5a6;border-radius:50%;animation:mc221spin .8s linear infinite}@keyframes mc221spin{to{transform:rotate(360deg)}}
 
-@media(max-width:1180px){.mc22-network-toolbar{grid-template-columns:1fr!important}.mc22-mode-tabs{grid-column:auto!important}.mc22-line-tools{grid-column:auto!important}.mc22-mode-status{justify-self:start!important;text-align:left!important}.mc221-line-grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr))}}
-@media(max-width:760px){.mc22-mode-tabs{grid-template-columns:repeat(5,minmax(64px,1fr))!important;overflow-x:auto!important;padding-bottom:2px}.mc22-mode-btn{padding:0 6px!important}.mc22-mode-btn small{display:none!important}.mc22-mode-icon{width:20px!important;height:20px!important}.mc221-line-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:178px}.mc221-picker-head{align-items:flex-start}.mc221-picker-foot{display:block}.mc221-picker-foot span{display:block;margin-top:3px}}
+@media(max-width:1180px){.mc22-network-toolbar{grid-template-columns:1fr!important}.mc22-mode-tabs{grid-column:1!important}.mc22-line-tools{grid-column:1!important;width:100%!important}.mc22-line-search{max-width:none!important}.mc22-mode-status{grid-column:1!important;justify-self:start!important;text-align:left!important}.mc221-line-grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr))}}
+@media(max-width:760px){.mc22-mode-tabs{grid-template-columns:repeat(5,minmax(72px,1fr))!important;overflow-x:auto!important;padding-bottom:2px}.mc22-mode-btn{padding:0 7px!important}.mc22-mode-btn small{display:none!important}.mc22-mode-icon{width:20px!important;height:20px!important}.mc221-line-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:178px}.mc221-picker-head{align-items:flex-start}.mc221-picker-foot{display:block}.mc221-picker-foot span{display:block;margin-top:3px}}
