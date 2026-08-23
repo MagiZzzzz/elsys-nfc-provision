@@ -47,7 +47,7 @@ function installOverrides(ORIG){
  renderLiveStations=function(){return mc22Mode==='metro'?ORIG.stations():renderNetworkStations()};
  renderLineStats=function(){return mc22Mode==='metro'?ORIG.stats():renderNetworkStats()};
  drawTrain=function(ctx,t,x,y,angle,status){return mc22Mode==='metro'?ORIG.draw(ctx,t,x,y,angle,status):drawNetworkTrain(ctx,t,x,y,angle,status)};
- refreshVehicles=async function(showMessage=false){if(mc22Mode==='metro')return ORIG.refresh(showMessage);return refreshNetworkMode(false,showMessage)};
+ refreshVehicles=async function(showMessage=false){if(mc22Mode==='metro')return ORIG.refresh(showMessage);if(!showMessage&&Date.now()-lastDataAt<15000)return;return refreshNetworkMode(false,showMessage)};
 }
 function updatePageCopy(){
  const live=document.getElementById('liveMap');const h=live?.querySelector('.live-map-head h2'),p=live?.querySelector('.live-map-head p');if(h)h.textContent='Carte live du réseau francilien';if(p)p.textContent='Métro, RER, Transilien, tram et bus : tracés IDFM, arrêts réels et véhicules PRIM animés sur le réseau. Sélectionne un mode puis une ligne.';
