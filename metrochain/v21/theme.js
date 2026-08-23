@@ -41,14 +41,22 @@
     box.appendChild(guide);
   }
 
+  function cleanText(s){return String(s||'').replace(/\s+/g,' ').trim()}
   function severity(text=''){
     const s=text.toLowerCase();
+    if(/chargement|lecture du trafic|synchronisation/.test(s))return 'loading';
     if(/interromp|suspend|fermé|fermée|incident grave|trafic interrompu/.test(s))return 'red';
     if(/perturb|travaux|ralenti|retard|dense|indispon|dégrad/.test(s))return 'orange';
     return 'green';
   }
-  function severityColor(s){return s==='red'?'#ef6262':s==='orange'?'#f0a94b':'#47d4a5'}
-  function cleanText(s){return String(s||'').replace(/\s+/g,' ').trim()}
+  function severityColor(s){return s==='red'?'#ef6262':s==='orange'?'#f0a94b':s==='loading'?'#71b7ec':'#47d4a5'}
+  function trafficSummary(){
+    const strip=d.querySelector('#liveMap .traffic-strip');if(!strip)return'';
+    const candidates=[strip,...strip.querySelectorAll('*')].map(n=>cleanText(n.innerText||n.textContent)).filter(Boolean);
+    const meaningful=candidates.find(t=>t.length<=190&&!/^(incidents?|chargement du trafic|actualiser|↻)$/i.test(t)&&/(trafic normal|aucune perturbation|trafic perturb|travaux|interromp|ralenti|retard|incident|suspend|fermet)/i.test(t));
+    const raw=meaningful||cleanText(strip.innerText||strip.textContent);
+    return /chargement du trafic|incidents\s*[▾▼]|actualiser|↻/i.test(raw)&&!/(trafic normal|aucune perturbation|perturb|travaux|interromp|ralenti|retard|suspend|fermet)/i.test(raw)?'Chargement du trafic en cours…':raw;
+  }
   function collectIncidentTexts(){
     const live=d.getElementById('liveMap');if(!live)return[];
     const nodes=new Set([
@@ -60,6 +68,7 @@
       if(!n||n.closest('#liveMetroMap,.mc20-left-rail,.mc20-right-rail,.mc21-incidents'))continue;
       const t=cleanText(n.innerText||n.textContent);
       if(t.length<8||t.length>220)continue;
+      if(/chargement du trafic|incidents?\s*[▾▼]?|actualiser|mise à jour|bulletin ratp|↻/i.test(t)&&!/(perturb|travaux|interromp|suspend|fermet|ralenti|retard|dense|indispon|dégrad)/i.test(t))continue;
       if(!/(perturb|incident|travaux|interromp|suspend|fermet|ralenti|retard|dense|indispon|dégrad)/i.test(t))continue;
       if(/^(incidents?|trafic normal|aucune perturbation)/i.test(t))continue;
       out.push(t);
@@ -71,23 +80,22 @@
   }
   function makeIncidentPanel(){
     const rail=d.querySelector('#liveMap .mc20-right-rail');if(!rail||rail.querySelector('.mc21-incidents'))return;
-    const p=d.createElement('section');p.className='mc20-card mc20-panel mc21-incidents';p.innerHTML=`<div class="mc21-incident-head"><h3>Incidents réseau</h3><span class="mc21-live-badge">LIVE</span></div><div class="mc21-global-status"><span class="mc21-status-dot">✓</span><div><b>Lecture du trafic…</b><span>Synchronisation avec l’état affiché par MetroChain.</span></div></div><div class="mc21-incident-list"></div><div class="mc21-incident-foot"><span class="mc21-update-time">Mise à jour —</span><a href="${TRAFFIC_URL}" target="_blank" rel="noopener">Bulletin RATP ↗</a></div>`;
+    const p=d.createElement('section');p.className='mc20-card mc20-panel mc21-incidents';p.innerHTML=`<div class="mc21-incident-head"><h3>Incidents réseau</h3><span class="mc21-live-badge">LIVE</span></div><div class="mc21-global-status"><span class="mc21-status-dot">…</span><div><b>Lecture du trafic…</b><span>Synchronisation avec l’état affiché par MetroChain.</span></div></div><div class="mc21-incident-list"></div><div class="mc21-incident-foot"><span class="mc21-update-time">Mise à jour —</span><a href="${TRAFFIC_URL}" target="_blank" rel="noopener">Bulletin RATP ↗</a></div>`;
     rail.insertBefore(p,rail.firstChild);
     refreshIncidents();
   }
   function refreshIncidents(){
     const panel=d.querySelector('.mc21-incidents');if(!panel)return;
-    const strip=d.querySelector('#liveMap .traffic-strip');
-    const raw=cleanText(strip?.innerText||strip?.textContent||'');
+    const raw=trafficSummary();
     const sev=severity(raw);
     const global=panel.querySelector('.mc21-global-status');
     const dot=global?.querySelector('.mc21-status-dot'),title=global?.querySelector('b'),desc=global?.querySelector('span');
-    if(dot){dot.style.background=severityColor(sev);dot.textContent=sev==='green'?'✓':sev==='orange'?'!':'×'}
-    if(title)title.textContent=sev==='green'?'Trafic global normal':sev==='orange'?'Perturbations en cours':'Incident majeur en cours';
+    if(dot){dot.style.background=severityColor(sev);dot.textContent=sev==='green'?'✓':sev==='orange'?'!':sev==='red'?'×':'…'}
+    if(title)title.textContent=sev==='green'?'Trafic global normal':sev==='orange'?'Perturbations en cours':sev==='red'?'Incident majeur en cours':'État trafic en cours de chargement';
     if(desc)desc.textContent=raw||'Aucun résumé trafic disponible dans l’application pour le moment.';
     const list=panel.querySelector('.mc21-incident-list');if(list){
       const items=collectIncidentTexts();
-      if(!items.length){list.innerHTML='<div class="mc21-empty">Aucun incident détaillé supplémentaire n’est actuellement exposé par l’application. Le statut global ci-dessus reste synchronisé avec MetroChain.</div>'}
+      if(!items.length){list.innerHTML=sev==='loading'?'<div class="mc21-empty">Les détails des incidents apparaîtront ici dès que le flux trafic de MetroChain sera chargé.</div>':'<div class="mc21-empty">Aucun incident détaillé supplémentaire n’est actuellement exposé par l’application. Le statut global ci-dessus reste synchronisé avec MetroChain.</div>'}
       else list.innerHTML=items.map(t=>{const s=severity(t);const line=(t.match(/(?:ligne|rer|tram(?:way)?)\s*[A-Z]?\s*(?:1[0-4]|[1-9]|[A-E]|T?\d+)/i)||[])[0]||'Information réseau';return `<div class="mc21-incident-item"><i class="mc21-incident-bar" style="background:${severityColor(s)}"></i><div><b>${line}</b><span>${t}</span></div></div>`}).join('');
     }
     const time=panel.querySelector('.mc21-update-time');if(time)time.textContent='Mise à jour '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
