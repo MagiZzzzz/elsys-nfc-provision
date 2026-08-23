@@ -1,0 +1,56 @@
+name: MetroChain v22 Runtime Diagnostic
+on:
+  pull_request:
+    branches: [metrochain-hosting]
+    paths:
+      - 'metrochain/v22/**'
+      - '.github/workflows/metrochain-v22-diagnostic.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Serve repository
+        run: python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/mc22-http.log 2>&1 &
+      - name: Inspect runtime lexical bindings and IDFM modes
+        run: |
+          cat > diag.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:1600,height:1000}});
+          await page.goto('http://127.0.0.1:8000/metrochain/v21/index.html?diag='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+          await page.waitForTimeout(10000);
+          const frame=page.frames().find(f=>/\/metrochain\/v2\/index\.html/.test(f.url()));
+          if(!frame) throw new Error('child frame missing');
+          const runtime=await frame.evaluate(()=>{
+            const lexical={};
+            for(const k of ['liveFeed','liveLeaflet','liveSelectedLines','liveLineLayer','liveStationLayer','liveMotionRecords','ORDER','LIVE_MAP_FEED','LIVE_VEHICLES_FEED']){
+              try{lexical[k]=eval(`typeof ${k}==='undefined'?{type:'undefined'}:{type:typeof ${k},ctor:${k}?.constructor?.name||null,size:${k}?.size??${k}?.length??null,keys:(typeof ${k}==='object'&&${k})?Object.keys(${k}).slice(0,30):[]}`)}catch(e){lexical[k]={error:String(e)}}
+            }
+            const funcs={};
+            for(const k of ['motionForVehicle','rebuildMotionRecords','drawTrain','lineIsVisible','renderLiveLines','renderLiveStations','pathStationSequence','fitLiveNetwork','renderLineStats']){try{funcs[k]=String(window[k]).slice(0,12000)}catch{}}
+            return {lexical,funcs};
+          });
+          console.log('LEXICAL\n'+JSON.stringify(runtime.lexical,null,2));
+          for(const [k,v] of Object.entries(runtime.funcs)) console.log('FUNCTION_'+k+'\n'+v+'\nEND_FUNCTION_'+k);
+          const base='https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets';
+          const candidates=['Subway','Rail','Train','Tram','Tramway','Bus','Coach'];
+          const probe={traces:{},stops:{}};
+          for(const x of candidates){
+            try{const u=`${base}/traces-des-lignes-de-transport-en-commun-idfm/records?limit=3&where=${encodeURIComponent(`route_type = "${x}"`)}`;const r=await fetch(u);const j=await r.json();probe.traces[x]={status:r.status,total:j.total_count,rows:(j.results||[]).map(z=>({route_id:z.route_id,short:z.route_short_name,type:z.route_type,color:z.route_color,network:z.networkname||z.operatorname}))}}catch(e){probe.traces[x]={error:String(e)}}
+            try{const u=`${base}/arrets-lignes/records?limit=3&where=${encodeURIComponent(`mode = "${x}"`)}`;const r=await fetch(u);const j=await r.json();probe.stops[x]={status:r.status,total:j.total_count,rows:(j.results||[]).map(z=>({stop:z.stop_name,short:z.shortname,mode:z.mode,route:z.route_id}))}}catch(e){probe.stops[x]={error:String(e)}}
+          }
+          console.log('ODS_PROBE\n'+JSON.stringify(probe,null,2));
+          await browser.close();
+          EOF
+          node diag.mjs

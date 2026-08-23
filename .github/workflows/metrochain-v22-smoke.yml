@@ -1,0 +1,68 @@
+name: MetroChain v22 Full Network Chromium
+on:
+  pull_request:
+    branches: [metrochain-hosting]
+    paths:
+      - 'metrochain/v22/**'
+      - 'metrochain/v21/**'
+      - 'metrochain/v20/**'
+      - 'metrochain/v2/**'
+      - '.github/workflows/metrochain-v22-smoke.yml'
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Serve repository
+        run: python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/mc22-http.log 2>&1 &
+      - name: Validate all live network modes
+        run: |
+          cat > mc22-smoke.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import fs from 'fs';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:1680,height:1050},deviceScaleFactor:1});
+          const errors=[];page.on('pageerror',e=>errors.push(String(e?.stack||e)));
+          await page.goto('http://127.0.0.1:8000/metrochain/v22/index.html?ci='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+          await page.waitForFunction(()=>{const f=document.querySelector('#appFrame');try{return !!(f?.contentWindow?.__MC22_THEME__&&f.contentDocument.querySelectorAll('.mc22-mode-btn').length===5)}catch{return false}},null,{timeout:60000});
+          const frame=page.frames().find(f=>/\/metrochain\/v2\/index\.html/.test(f.url()));if(!frame)throw new Error('child frame missing');
+          await frame.waitForFunction(()=>document.querySelectorAll('#liveMetroMap canvas').length>0,null,{timeout:60000});
+          await frame.evaluate(()=>{window.__mc22hb=0;window.__mc22timer=setInterval(()=>window.__mc22hb++,25)});
+          const base=await frame.evaluate(()=>({canvas:document.querySelectorAll('#liveMetroMap canvas').length,train:document.querySelectorAll('#liveMetroMap .metro-train-canvas').length,leak:document.querySelectorAll('#liveMetroMap [class*="mc22"],#liveMetroMap [id*="mc22"]').length}));
+          console.log('BASE '+JSON.stringify(base));if(base.canvas<1||base.train<1)throw new Error('metro map canvas missing');if(base.leak)throw new Error('v22 UI leaked inside map');
+          fs.mkdirSync('mc22-shots',{recursive:true});
+          const modes=['metro','rer','transilien','tram','bus'];
+          const summaries={};
+          for(const mode of modes){
+            const before=await frame.evaluate(()=>window.__mc22hb);
+            await frame.locator(`.mc22-mode-btn[data-mode="${mode}"]`).click();
+            if(mode!=='metro') await frame.waitForFunction(m=>{try{return eval('liveFeed?.mode')===m&&!document.querySelector('.mc22-mode-status')?.classList.contains('loading')}catch{return false}},mode,{timeout:70000});
+            else await frame.waitForFunction(()=>!document.querySelector('.mc22-mode-status')?.classList.contains('loading'),null,{timeout:70000});
+            await page.waitForTimeout(1200);
+            const s=await frame.evaluate((m)=>{const feed=eval('liveFeed');return{mode:m,feedMode:feed?.mode||'metro',lines:feed?.lines?.length||0,stations:feed?.stations?.length||0,vehicles:feed?.vehicles?.length||0,selected:eval('liveSelectedLines').size,motions:eval('liveMotionRecords').length,canvas:document.querySelectorAll('#liveMetroMap canvas').length,trainCanvas:document.querySelectorAll('#liveMetroMap .metro-train-canvas').length,leak:document.querySelectorAll('#liveMetroMap [class*="mc22"],#liveMetroMap [id*="mc22"]').length,status:(document.querySelector('.mc22-mode-status')?.innerText||'').trim(),incidents:(document.querySelector('.mc21-incidents')?.innerText||'').slice(0,500),buttons:document.querySelectorAll('#liveLineFilters .live-line-btn').length,hb:window.__mc22hb}},mode);
+            summaries[mode]=s;console.log('MODE '+JSON.stringify(s));
+            if(s.hb-before<10)throw new Error('event loop stalled '+mode);if(s.canvas<1||s.trainCanvas<1)throw new Error('map canvas regressed '+mode);if(s.leak)throw new Error('v22 leak '+mode);if(s.lines<1)throw new Error('no lines '+mode);if(mode!=='metro'&&s.stations<1)throw new Error('no stations '+mode);if(mode!=='metro'&&s.buttons<1)throw new Error('no line filters '+mode);
+            await page.screenshot({path:`mc22-shots/${mode}.png`,fullPage:false});
+          }
+          const traffic={};for(const mode of modes){const r=await page.request.get(`https://mwqesmycduqkglpgldrr.supabase.co/functions/v1/idfm-traffic?mode=${mode}`);traffic[mode]={status:r.status(),body:(await r.text()).slice(0,500)};if(r.status()!==200)throw new Error('traffic backend '+mode+' '+r.status())}console.log('TRAFFIC '+JSON.stringify(traffic));
+          const nav=frame.locator('.nav-btn:visible');for(let i=0;i<await nav.count();i++){await nav.nth(i).click();await page.waitForTimeout(1000);const visible=await frame.evaluate(()=>[...document.querySelectorAll('main')].filter(m=>!m.classList.contains('hidden')&&getComputedStyle(m).display!=='none').map(m=>m.id));if(visible.length!==1)throw new Error('invalid page visibility '+JSON.stringify(visible))}
+          const end=await frame.evaluate(()=>({canvas:document.querySelectorAll('#liveMetroMap canvas').length,errors:window.__MC_ERRORS__||[]}));console.log('SUMMARIES '+JSON.stringify(summaries));console.log('END '+JSON.stringify(end));console.log('PAGE_ERRORS '+JSON.stringify(errors));if(errors.length||end.errors.length)throw new Error('JS errors detected');
+          await browser.close();
+          EOF
+          node mc22-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: metrochain-v22-screenshots
+          path: mc22-shots
+          if-no-files-found: ignore
