@@ -5,17 +5,18 @@
   const d=document,body=d.body; body.classList.add('mc20-ready');
 
   const MEDIA={
-    line14Station:'https://www.ratp.fr/sites/default/files/styles/article_editorial_xl/public/2024-08/93274D011.JPEG',
-    line14Train:'https://www.ratp.fr/sites/default/files/styles/swiper_article__xl/public/article/sliders/Capture%20d%E2%80%99%C3%A9cran%202025-09-03%20171708_1.jpg?h=4a7d1ed4',
+    saintDenis:'https://www.grandparisexpress.fr/sites/default/files/styles/banner_xl/public/2024-09/Gare%20Saint-Denis%20-%20Pleyel%20apr%C3%A8s%20l%27ouverture%20de%20la%20ligne%2014%20aux%20usagers%20le%2024_06_2024.jpg?itok=eSv5LW5o',
     lhay:'https://upload.wikimedia.org/wikipedia/commons/b/be/Station_Ha%C3%BF_Roses_M%C3%A9tro_Paris_Ligne_14_-_L%27Ha%C3%BF-les-Roses_%28FR94%29_-_2024-06-26_-_7.jpg',
     chevilly:'https://www.grandparisexpress.fr/sites/default/files/styles/banner_m/public/2024-07/Gare%20Chevilly-Larue%20la%20gare%20avant%20ouverture%20au%20public-Anne-Claude%20Barbier.jpg?itok=XHBOAR2v',
-    plan14:'https://www.ratp.fr/plan-de-ligne/img/metro/14/plan-de-ligne_metro_ligne-14.1707906674.png',
+    villejuif:'https://www.ville-rail-transports.com/wp-content/uploads/2024/12/IMG20241219101320-scaled.jpg',
+    orly:'https://www.societedesgrandsprojets.fr/sites/default/files/styles/banner_l/public/2025-10/245726-n9cxxkqn9d-whr.jpg?itok=-6KKn10b',
     youtube:'https://www.youtube-nocookie.com/embed/LW9-KkbaEuQ?rel=0&modestbranding=1'
   };
   const LINKS={
     ratpGroup:'https://ratpgroup.com/en/the-ratp-group/entities/ratp/',
     line14:'https://www.ratp.fr/decouvrir/patrimoine/histoire-metro-ligne-14',
     extension:'https://www.ratp.fr/prolongement-metro-ligne-14',
+    gpe:'https://www.grandparisexpress.fr/ligne-14',
     video:'https://www.youtube.com/watch?v=LW9-KkbaEuQ',
     panam:'https://ratpgroup.com/fr/ile-de-france-mobilites-et-la-ratp-ameliorent-linformation-voyageurs-dans-les-stations-de-metro-avec-de-nouveaux-panneaux-daffichage-100-accessibles/'
   };
@@ -27,8 +28,8 @@
 
     const left=d.createElement('aside'); left.className='mc20-left-rail mc20-stagger'; left.innerHTML=`
       <article class="mc20-card mc20-photo" style="--mc20-i:0">
-        <div class="img" style="background-image:url('${MEDIA.line14Station}')"></div>
-        <div class="mc20-photo-copy"><span class="mc20-eyebrow">PHOTO RATP · LIGNE 14</span><h3>Le réseau réel,<br>au centre.</h3><p>La carte garde son moteur live actuel. Autour, MetroChain affiche désormais du contenu réel et sourcé.</p><a class="mc20-source" href="${LINKS.line14}" target="_blank" rel="noopener">Voir la source RATP ↗</a></div>
+        <div class="img" style="background-image:url('${MEDIA.saintDenis}')"></div>
+        <div class="mc20-photo-copy"><span class="mc20-eyebrow">SAINT-DENIS–PLEYEL · LIGNE 14</span><h3>Le réseau réel,<br>au centre.</h3><p>La carte garde son moteur live actuel. Autour, MetroChain affiche désormais du contenu réel et sourcé.</p><a class="mc20-source" href="${LINKS.gpe}" target="_blank" rel="noopener">Photo / projet Grand Paris Express ↗</a></div>
       </article>
       <section class="mc20-card mc20-panel" style="--mc20-i:1">
         <div class="mc20-panel-head"><b>Le métro en chiffres</b><a href="${LINKS.ratpGroup}" target="_blank" rel="noopener">Source RATP Group ↗</a></div>
@@ -38,13 +39,13 @@
           <div class="mc20-stat"><strong>206 km</strong><span>de réseau métro</span><em>RATP Group</em></div>
           <div class="mc20-stat"><strong>+450 km</strong><span>de voies exploitées</span><em>RATP Group</em></div>
         </div>
-        <div class="mc20-note">Ces chiffres sont des données de référence officielles, pas des valeurs “temps réel”.</div>
+        <div class="mc20-note">Données de référence officielles. Le temps réel reste dans la carte centrale.</div>
       </section>`;
 
     const right=d.createElement('aside'); right.className='mc20-right-rail mc20-stagger'; right.innerHTML=`
       <article class="mc20-card mc20-video" style="--mc20-i:0">
         <div class="mc20-video-frame"><iframe loading="lazy" src="${MEDIA.youtube}" title="RATP — Prolongement Ligne 14 : Marche à Blanc entre Olympiades et Aéroport d'Orly" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>
-        <div class="mc20-video-copy"><h3>Voyage réel sur la ligne 14</h3><p>Vidéo officielle RATP Group : marche à blanc entre Olympiades et Aéroport d’Orly, publiée avant l’ouverture du prolongement 2024.</p><a class="mc20-source" href="${LINKS.video}" target="_blank" rel="noopener">Ouvrir sur YouTube ↗</a></div>
+        <div class="mc20-video-copy"><h3>Voyage réel sur la ligne 14</h3><p>Vidéo officielle RATP Group : marche à blanc entre Olympiades et Aéroport d’Orly, juste avant l’ouverture du prolongement 2024.</p><a class="mc20-source" href="${LINKS.video}" target="_blank" rel="noopener">Ouvrir sur YouTube ↗</a></div>
       </article>
       <section class="mc20-card mc20-panel" style="--mc20-i:1">
         <div class="mc20-panel-head"><b>Ligne 14 · chiffres clés</b><a href="${LINKS.line14}" target="_blank" rel="noopener">RATP ↗</a></div>
@@ -57,12 +58,12 @@
         </div>
       </section>
       <section class="mc20-card mc20-panel" style="--mc20-i:2">
-        <div class="mc20-panel-head"><b>Galerie réelle</b><small>RATP · GPE · Wikimedia</small></div>
+        <div class="mc20-panel-head"><b>Galerie réelle</b><small>GPE · SGP · Wikimedia</small></div>
         <div class="mc20-gallery">
-          <a class="mc20-thumb" data-name="Ligne 14 · RATP" href="${LINKS.line14}" target="_blank" rel="noopener" style="background-image:url('${MEDIA.line14Train}')"></a>
+          <a class="mc20-thumb" data-name="Saint-Denis–Pleyel" href="${LINKS.gpe}" target="_blank" rel="noopener" style="background-image:url('${MEDIA.saintDenis}')"></a>
           <a class="mc20-thumb" data-name="L’Haÿ-les-Roses" href="${LINKS.line14}" target="_blank" rel="noopener" style="background-image:url('${MEDIA.lhay}')"></a>
-          <a class="mc20-thumb" data-name="Chevilly-Larue" href="${LINKS.extension}" target="_blank" rel="noopener" style="background-image:url('${MEDIA.chevilly}')"></a>
-          <a class="mc20-thumb" data-name="Plan officiel ligne 14" href="${MEDIA.plan14}" target="_blank" rel="noopener" style="background-image:url('${MEDIA.plan14}')"></a>
+          <a class="mc20-thumb" data-name="Chevilly-Larue" href="${LINKS.gpe}" target="_blank" rel="noopener" style="background-image:url('${MEDIA.chevilly}')"></a>
+          <a class="mc20-thumb" data-name="Aéroport d’Orly" href="${LINKS.extension}" target="_blank" rel="noopener" style="background-image:url('${MEDIA.orly}')"></a>
         </div>
       </section>`;
 
@@ -72,11 +73,11 @@
   }
 
   const pageMeta={
-    home:['JEUX & EXPLORATION','Explorez 302 stations autrement','Défis, modes de jeu et découverte du réseau : une interface plus visuelle sans inventer de faux chiffres.',MEDIA.line14Train],
+    home:['JEUX & EXPLORATION','Explorez 302 stations autrement','Défis, modes de jeu et découverte du réseau : une interface plus visuelle sans inventer de faux chiffres.',MEDIA.saintDenis],
     crosswordsScreen:['MOTS CROISÉS','Le réseau, lettre par lettre','Les grilles s’inspirent des stations, des lignes et de l’architecture du métro parisien.',MEDIA.lhay],
     progressScreen:['PROGRESSION','Mesurez votre parcours sur un vrai réseau','Comparez votre progression à l’échelle du réseau de référence RATP : 16 lignes, 302 stations et 206 km.',MEDIA.chevilly],
-    communityScreen:['COMMUNAUTÉ','Partagez vos découvertes métro','La partie sociale reste centrée sur vos scores et vos défis, avec des repères réels sur le réseau.',MEDIA.line14Station],
-    leaderboardScreen:['CLASSEMENTS','Votre score, face au réseau','Une lecture plus claire des performances, avec moins de décor et plus de hiérarchie.',MEDIA.line14Train],
+    communityScreen:['COMMUNAUTÉ','Partagez vos découvertes métro','La partie sociale reste centrée sur vos scores et vos défis, avec des repères réels sur le réseau.',MEDIA.orly],
+    leaderboardScreen:['CLASSEMENTS','Votre score, face au réseau','Une lecture plus claire des performances, avec moins de décor et plus de hiérarchie.',MEDIA.villejuif],
     game:['SESSION EN COURS','Concentrez-vous sur la ligne','L’interface de jeu garde ses règles mais gagne en lisibilité et en contraste.',MEDIA.lhay],
     special:['MODE SPÉCIAL','Une autre façon d’explorer Paris','Des variantes de jeu au-dessus d’un réseau réel de 16 lignes et 302 stations.',MEDIA.chevilly]
   };
