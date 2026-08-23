@@ -68,7 +68,7 @@ async function switchMode(mode){
  try{if(typeof journeyActive!=='undefined'&&journeyActive&&typeof clearJourney==='function')clearJourney()}catch{}
  if(mode==='metro'){
   loading=true;setModeStatus('Retour au métro · chargement…','loading');
-  try{await window.__MC22_ORIGINALS__.loadMetro(true);await window.__MC22_ORIGINALS__.refresh(false);window.__MC22_ORIGINALS__.filters();renderLiveNetwork(true);renderLineStops();window.__MC22_ORIGINALS__.stats();updateCounts();setModeStatus(`${liveFeed?.counts?.lines??16} lignes · ${liveFeed?.vehicles?.length??0} rames PRIM`);await loadNetworkIncidents('metro')}catch(e){console.error(e);setModeStatus('Métro indisponible','error')}finally{loading=false}
+  try{await window.__MC22_ORIGINALS__.loadMetro(true);await window.__MC22_ORIGINALS__.refresh(false);window.__MC22_ORIGINALS__.filters();renderLiveNetwork(true);renderLineStops();window.__MC22_ORIGINALS__.stats();updateCounts();setModeStatus(`${liveFeed?.counts?.lines??16} lignes · ${liveFeed?.vehicles?.length??0} rames PRIM`);loadNetworkIncidents('metro')}catch(e){console.error(e);setModeStatus('Métro indisponible','error')}finally{loading=false}
   return;
  }
  await refreshNetworkMode(true,false);
@@ -78,7 +78,7 @@ async function refreshNetworkMode(fit=false,showMessage=false){
  if(loading&&!fit)return;loading=true;const mode=mc22Mode;setModeStatus(`${MODE_META[mode].label} · synchronisation PRIM…`,'loading');
  try{
   const previous=new Set([...liveSelectedLines]),oldLines=liveFeed?.lines?.length||0,wasAll=previous.size===oldLines;
-  const [data]=await Promise.all([fetchJson(`${FEED}?mode=${encodeURIComponent(mode)}`),loadNetworkIncidents(mode)]);
+  const data=await fetchJson(`${FEED}?mode=${encodeURIComponent(mode)}`,mode==='bus'?65000:50000);
   if(mode!==mc22Mode)return;
   liveFeed=data;lastDataAt=Date.now();
   const ids=(data.lines||[]).map(x=>String(x.id));liveSelectedLines.clear();
@@ -88,6 +88,7 @@ async function refreshNetworkMode(fit=false,showMessage=false){
   setModeStatus(`${data.lines?.length||0} lignes · ${active} actifs · ${up} prévus`);
   const status=document.getElementById('liveSourceStatus');if(status){status.classList.toggle('live',(data.vehicles||[]).length>0);const s=status.querySelector('span');if(s)s.textContent=`PRIM · ${data.vehicles?.length||0} véhicules ${MODE_META[mode].label}`}
   const upd=document.getElementById('liveUpdatedAt');if(upd)upd.textContent=`PRIM ${data.vehicles?.[0]?.source_age_seconds??0}s · simulation entre arrêts IDFM`;
+  loadNetworkIncidents(mode);
   if(showMessage&&typeof liveMessage==='function')liveMessage(`${data.vehicles?.length||0} véhicules ${MODE_META[mode].label} suivis`);
  }catch(e){console.error('v22 network',e);setModeStatus(`${MODE_META[mode].label} indisponible`,'error');if(showMessage&&typeof liveMessage==='function')liveMessage(`${MODE_META[mode].label} : flux indisponible`)}finally{loading=false}
 }
@@ -125,7 +126,7 @@ function drawNetworkTrain(ctx,t,x,y,angle,status){
 function incidentText(d){const ms=d?.messages||[];return ms.find(m=>/titre|notification/i.test(m.channel||''))?.text||ms[0]?.text||d?.cause||'Information trafic'}
 function severityColor(d){const e=String(d?.severity?.effect||'').toUpperCase();if(/NO_SERVICE|REDUCED_SERVICE/.test(e))return'#ef6262';if(/DELAY|DETOUR|MODIFIED|SIGNIFICANT/.test(e))return'#f0a94b';return d?.severity?.color||'#f0a94b'}
 async function loadNetworkIncidents(mode){
- try{const d=await fetchJson(`${TRAFFIC}?mode=${encodeURIComponent(mode)}`,40000);if(mode===mc22Mode||mode==='metro'&&mc22Mode==='metro'){try{trafficData=d;trafficMode=mode}catch{}renderNetworkIncidents(d,mode)}return d}catch(e){console.warn('v22 traffic',mode,e);if(mode===mc22Mode)renderNetworkIncidents(null,mode);return null}
+ try{const d=await fetchJson(`${TRAFFIC}?mode=${encodeURIComponent(mode)}`,25000);if(mode===mc22Mode||mode==='metro'&&mc22Mode==='metro'){try{trafficData=d;trafficMode=mode}catch{}renderNetworkIncidents(d,mode)}return d}catch(e){console.warn('v22 traffic',mode,e);if(mode===mc22Mode)renderNetworkIncidents(null,mode);return null}
 }
 function renderNetworkIncidents(data,mode){
  const panel=document.querySelector('.mc21-incidents');if(!panel)return;const entries=[];for(const r of data?.reports||[])for(const d of r.disruptions||[])if(d.time_state!=='inactive')entries.push({line:r.line,d});entries.sort((a,b)=>{const aa=a.d.time_state==='active'?0:1,bb=b.d.time_state==='active'?0:1;return aa-bb+(Number(a.d.severity?.priority||50)-Number(b.d.severity?.priority||50))});const active=entries.filter(x=>x.d.time_state==='active').length,label=MODE_META[mode]?.label||mode;
