@@ -12,7 +12,9 @@ window.__MC225_FAST_UI_STATE__={startupWarmRequests:0,intentWarmRequests:0,memor
 
 function installFrameBatching(tries=0){
   if(tries>160)return;
-  const names=['renderLiveFilters','renderLiveNetwork','renderLineStops','renderLineStats'];
+  // Keep the line picker synchronous so its selected/active state is coherent
+  // immediately after a click. Only the heavier map/stop/stats work is batched.
+  const names=['renderLiveNetwork','renderLineStops','renderLineStats'];
   let ready=true;
   for(const n of names)if(typeof window[n]!=='function')ready=false;
   if(!window.__MC22_THEME__||!ready){setTimeout(()=>installFrameBatching(tries+1),50);return}
