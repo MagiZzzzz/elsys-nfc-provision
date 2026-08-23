@@ -1,0 +1,75 @@
+name: MetroChain v21 Chromium smoke
+on:
+  pull_request:
+    branches: [metrochain-hosting]
+    paths:
+      - 'metrochain/v21/**'
+      - 'metrochain/v20/**'
+      - 'metrochain/v18/**'
+      - 'metrochain/v2/**'
+      - '.github/workflows/metrochain-v21-smoke.yml'
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Serve repository
+        run: python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/mc21-http.log 2>&1 &
+      - name: Validate v21 UI and preserve live map
+        run: |
+          cat > mc21-smoke.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import fs from 'fs';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:1600,height:1000},deviceScaleFactor:1});
+          const errors=[];page.on('pageerror',e=>errors.push(String(e?.stack||e)));
+          await page.goto('http://127.0.0.1:8000/metrochain/v21/index.html?ci='+Date.now(),{waitUntil:'domcontentloaded',timeout:60000});
+          await page.waitForFunction(()=>{const f=document.querySelector('#appFrame');try{return !!(f?.contentWindow?.__MC21_THEME__&&f.contentDocument.querySelector('.mc21-incidents')&&f.contentDocument.querySelector('.mc21-route-head')&&f.contentDocument.querySelector('.mc21-ambient')&&f.contentDocument.querySelector('#mc21Transition'))}catch{return false}},null,{timeout:60000});
+          const frame=page.frames().find(f=>/\/metrochain\/v2\/index\.html/.test(f.url()));
+          if(!frame)throw new Error('MetroChain child frame missing');
+          await frame.evaluate(()=>{window.__mc21hb=0;window.__mc21timer=setInterval(()=>window.__mc21hb++,25)});
+          const base=await frame.evaluate(()=>({canvas:document.querySelectorAll('#liveMetroMap canvas').length,trains:document.querySelectorAll('#liveMetroMap .metro-train-canvas').length,leak:document.querySelectorAll('#liveMetroMap [class*="mc21"],#liveMetroMap [id*="mc21"]').length,incident:(document.querySelector('.mc21-incidents')?.innerText||'').trim(),journey:!!document.querySelector('.journey-box.mc21-journey')}));
+          console.log('BASE '+JSON.stringify(base));
+          if(base.canvas<1)throw new Error('Live map canvas missing');
+          if(base.leak!==0)throw new Error('v21 DOM leaked inside live map');
+          if(!base.journey)throw new Error('Journey redesign missing');
+          if(base.incident.length<20)throw new Error('Incident ribbon empty');
+          fs.mkdirSync('mc21-shots',{recursive:true});
+          const nav=frame.locator('.nav-btn:visible');const n=await nav.count();
+          for(let i=0;i<n;i++){
+            const b=nav.nth(i),label=(await b.textContent()).trim(),before=await frame.evaluate(()=>window.__mc21hb);
+            await b.click({timeout:5000});await page.waitForTimeout(130);
+            const trans=await frame.evaluate(()=>document.querySelector('#mc21Transition')?.classList.contains('play'));
+            await page.waitForTimeout(900);
+            const s=await frame.evaluate(()=>({hb:window.__mc21hb,visible:[...document.querySelectorAll('main')].filter(m=>!m.classList.contains('hidden')&&getComputedStyle(m).display!=='none').map(m=>m.id),canvas:document.querySelectorAll('#liveMetroMap canvas').length,leak:document.querySelectorAll('#liveMetroMap [class*="mc21"],#liveMetroMap [id*="mc21"]').length,theme:window.__MC21_THEME__}));
+            console.log('PAGE '+JSON.stringify({label,transition:trans,delta:s.hb-before,...s}));
+            if(s.hb-before<10)throw new Error('Event loop stalled on '+label);
+            if(s.visible.length!==1)throw new Error('Invalid visible main on '+label);
+            if(s.leak!==0)throw new Error('v21 leaked inside live map on '+label);
+            if(i>0&&!trans)throw new Error('Train transition missing on '+label);
+            const safe=label.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+            await page.screenshot({path:`mc21-shots/${String(i+1).padStart(2,'0')}-${safe||'page'}.png`,fullPage:false});
+          }
+          const end=await frame.evaluate(()=>({canvas:document.querySelectorAll('#liveMetroMap canvas').length,trains:document.querySelectorAll('#liveMetroMap .metro-train-canvas').length,errors:window.__MC_ERRORS__||[]}));
+          console.log('END '+JSON.stringify(end));console.log('PAGE_ERRORS '+JSON.stringify(errors));
+          if(end.canvas<base.canvas)throw new Error('Live map canvas regressed');
+          if(errors.length||end.errors.length)throw new Error('JS errors detected');
+          await browser.close();
+          EOF
+          node mc21-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: metrochain-v21-screenshots
+          path: mc21-shots
+          if-no-files-found: ignore
