@@ -1,0 +1,35 @@
+name: MetroChain v22 Backend Probe
+on:
+  pull_request:
+    branches: [metrochain-hosting]
+    paths:
+      - 'metrochain/v22/**'
+      - '.github/workflows/metrochain-v22-backend-probe.yml'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Probe multimodal feeds
+        run: |
+          cat > probe.mjs <<'EOF'
+          const base='https://mwqesmycduqkglpgldrr.supabase.co/functions/v1/network-live-feed';
+          const modes=['rer','transilien','tram','bus'];
+          const one=async(mode)=>{
+            const c=new AbortController();const t=setTimeout(()=>c.abort(),45000);const started=Date.now();
+            try{
+              const r=await fetch(`${base}?mode=${mode}&probe=${Date.now()}`,{cache:'no-store',signal:c.signal});
+              const txt=await r.text();let d=null;try{d=JSON.parse(txt)}catch{}
+              return {mode,status:r.status,ms:Date.now()-started,bytes:txt.length,ok:d?.ok??false,lines:d?.lines?.length??0,stations:d?.stations?.length??0,vehicles:d?.vehicles?.length??0,duration_ms:d?.duration_ms??null,diagnostics:d?.diagnostics??null,error:d?.error??null};
+            }catch(e){return {mode,ms:Date.now()-started,error:String(e)}}finally{clearTimeout(t)}
+          };
+          const out=await Promise.all(modes.map(one));
+          console.log('BACKEND_PROBE '+JSON.stringify(out));
+          const bad=out.filter(x=>x.status!==200||!x.ok||x.lines<1||x.stations<1);
+          if(bad.length){console.error('BACKEND_BAD '+JSON.stringify(bad));process.exitCode=1}
+          EOF
+          node probe.mjs
