@@ -1,0 +1,48 @@
+/* MetroChain v22.11 — itinerary readability/clickability fix */
+#liveMap .journey-box,
+#liveMap .journey-box.mc21-journey{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:14px!important;
+  padding:18px 20px!important;
+  overflow:visible!important;
+}
+#liveMap .journey-box .journey-intro{display:none!important}
+#liveMap .journey-box .journey-form,
+#liveMap .journey-box.mc21-journey .journey-form{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 46px minmax(0,1fr) 132px!important;
+  gap:12px!important;
+  align-items:end!important;
+  width:100%!important;
+  min-width:0!important;
+  overflow:visible!important;
+}
+#liveMap .journey-box .place-field{min-width:0!important}
+#liveMap .journey-box .place-field input{width:100%!important;min-width:0!important;box-sizing:border-box!important}
+#liveMap .journey-box .journey-submit{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:132px!important;
+  width:132px!important;
+  height:58px!important;
+  min-height:58px!important;
+  padding:0 14px!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+  position:relative!important;
+  z-index:30!important;
+  cursor:pointer!important;
+}
+#liveMap .journey-box .journey-swap{pointer-events:auto!important;position:relative!important;z-index:30!important}
+#liveMap .journey-box .place-suggestions{z-index:10000!important}
+@media(max-width:1180px){
+ #liveMap .journey-box .journey-form,#liveMap .journey-box.mc21-journey .journey-form{grid-template-columns:minmax(0,1fr) 46px minmax(0,1fr)!important}
+ #liveMap .journey-box .journey-submit{grid-column:1/-1!important;width:100%!important;min-width:0!important}
+}
+@media(max-width:720px){
+ #liveMap .journey-box{padding:14px!important}
+ #liveMap .journey-box .journey-form,#liveMap .journey-box.mc21-journey .journey-form{grid-template-columns:minmax(0,1fr) 42px minmax(0,1fr)!important;gap:8px!important}
+}
