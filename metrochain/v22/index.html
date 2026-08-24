@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="dark">
-  <title>MétroChain v22.8 · Sources clarifiées</title>
+  <title>MétroChain v22.9 · Stable live map</title>
   <style>
     html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b12}
     #appFrame{display:block;width:100%;height:100%;border:0;background:#050b12}
-    #boot{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:#050b12;color:#fff;font:700 14px/1.4 system-ui;transition:opacity .38s ease,visibility .38s ease}
+    #boot{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:#050b12;color:#fff;font:700 14px/1.4 system-ui;transition:opacity .28s ease,visibility .28s ease}
     #boot.hide{opacity:0;visibility:hidden}
     #boot span{padding:14px 18px;border:1px solid #ffffff18;border-radius:16px;background:#ffffff0b;box-shadow:0 24px 80px #0009}
     #boot i{display:inline-block;width:8px;height:8px;margin-right:9px;border-radius:50%;background:#49d5a6;box-shadow:0 0 0 0 #49d5a688;animation:p 1.4s ease-out infinite}
@@ -17,7 +17,7 @@
 </head>
 <body>
   <div id="boot"><span><i></i>Connexion au réseau francilien…</span></div>
-  <iframe id="appFrame" title="MétroChain" src="../v2/index.html?v=20260823v17-3-pro"></iframe>
+  <iframe id="appFrame" title="MétroChain" src="../v2/index.html?v=20260824v22-9-stable"></iframe>
   <script>
   (()=>{
     const f=document.getElementById('appFrame'),boot=document.getElementById('boot');
@@ -29,16 +29,15 @@
       add(d,'script','mc18-runtime','../v18/theme.js?v=20260823d');
       add(d,'link','mc20-theme','../v20/theme.css?v=20260823c');
       add(d,'script','mc20-runtime','../v20/theme.js?v=20260823c');
-      add(d,'script','mc225-freeze-guard','../v22/freeze-guard.js?v=20260823v22-5');
       add(d,'link','mc21-theme','../v21/theme.css?v=20260823a');
-      add(d,'script','mc21-runtime','../v21/theme.js?v=20260823a');
+      add(d,'script','mc22-incident-shell','../v22/incident-shell.js?v=20260824v22-9');
       add(d,'link','mc22-theme','../v22/theme.css?v=20260823v22-8');
       add(d,'link','mc221-filter-theme','../v22/filter-fix.css?v=20260823v22-8');
       add(d,'script','mc22-runtime','../v22/theme.js?v=20260823v22-8');
       add(d,'script','mc226-render-perf','../v22/render-perf.js?v=20260823v22-8');
       add(d,'script','mc223-motion-status','../v22/motion-status.js?v=20260823v22-8');
       add(d,'script','mc225-fast-ui','../v22/fast-ui.js?v=20260823v22-8');
-      boot.classList.add('hide');return true}catch(e){console.error('MetroChain v22.8 shell',e);return false}};
+      boot.classList.add('hide');return true}catch(e){console.error('MetroChain v22.9 shell',e);return false}};
     f.addEventListener('load',()=>{let n=0;const t=setInterval(()=>{if(apply()||++n>180)clearInterval(t)},100)})
   })();
   </script>
