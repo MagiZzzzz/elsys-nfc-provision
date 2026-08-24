@@ -1,223 +1,75 @@
 (()=>{
 'use strict';
 if(window.__MC22_NETWORK_OVERLAY__)return;
-window.__MC22_NETWORK_OVERLAY__='v22.20-hard-snap-mini';
+window.__MC22_NETWORK_OVERLAY__='v22.22-stops-labels-filter';
 const BASE='https://mwqesmycduqkglpgldrr.supabase.co/functions/v1/';
-const METRO_COLORS={'1':'#ffcd00','2':'#003ca6','3':'#837902','3BIS':'#6ec4e8','4':'#be418d','5':'#ff7e2e','6':'#6eca97','7':'#fa9aba','7BIS':'#6eca97','8':'#e19bdf','9':'#b6bd00','10':'#c9910d','11':'#704b1c','12':'#007852','13':'#6ec4e8','14':'#62259d'};
-const REFRESH_MS=3000,MOVE_MS=3300,FRAME_MS=30;
-let layer=null,busy=false,timer=null,lastMode=null,raf=0,lastFrame=0,currentStations=new Map();
+const METRO_COLORS={'1':'#ffcd00','2':'#003ca6','3':'#837902','3bis':'#6ec4e8','4':'#be418d','5':'#ff7e2e','6':'#6eca97','7':'#fa9aba','7bis':'#6eca97','8':'#e19bdf','9':'#b6bd00','10':'#c9910d','11':'#704b1c','12':'#007852','13':'#6ec4e8','14':'#62259d'};
+const REFRESH_MS=3000,FRAME_MS=32;
+let layer=null,labelLayer=null,busy=false,timer=null,lastMode=null,raf=0,lastFrame=0;
 let metroGeometryPromise=null,metroGeometryAt=0,metroStations=new Map(),metroLines=new Map();
 const markers=new Map(),metroGraphs=new Map(),metroSegmentCache=new Map(),nearestNodeCache=new Map();
-
+const MAJOR_RE=/gare|châtelet|saint-lazare|montparnasse|république|nation|bastille|opéra|étoile|défense|bercy|invalides|concorde|madeleine|trocadéro|place d'italie|denfert|barbès|stalingrad|jussieu|bibliothèque|mairie de saint-ouen/i;
 function mode(){return document.querySelector('.mc22-mode-btn.active')?.dataset?.mode||'metro'}
 function map(){try{return eval('liveLeaflet')}catch{return null}}
 function selected(){try{return new Set([...eval('liveSelectedLines')].map(String))}catch{return new Set()}}
-function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function normLine(v){let s=String(v??'').trim().toLowerCase().replace(/\s+/g,'').replace(/^m/,'');if(s==='3b')s='3bis';if(s==='7b')s='7bis';return s}
-function ensureLayer(){const m=map();if(!m||typeof L==='undefined')return null;if(!layer)layer=L.layerGroup().addTo(m);return layer}
-function clearMarkers(){if(layer)layer.clearLayers();markers.clear();currentStations=new Map()}
-function killLegacyCanvas(){const root=document.getElementById('liveMetroMap');if(!root)return;root.querySelectorAll('canvas.metro-train-canvas').forEach(c=>{c.style.setProperty('display','none','important');c.style.setProperty('visibility','hidden','important');c.style.setProperty('opacity','0','important');c.style.pointerEvents='none';c.setAttribute('aria-hidden','true')})}
-function installStyle(){
-  if(document.getElementById('mc22-network-overlay-style-v2220'))return;
-  document.querySelectorAll('#mc22-network-overlay-style,#mc22-network-overlay-style-v2216,#mc22-network-overlay-style-v2217,#mc22-network-overlay-style-v2218,#mc22-network-overlay-style-v2219').forEach(x=>x.remove());
-  const s=document.createElement('style');s.id='mc22-network-overlay-style-v2220';s.textContent=`
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function ensureLayers(){const m=map();if(!m||typeof L==='undefined')return false;if(!layer)layer=L.layerGroup().addTo(m);if(!labelLayer)labelLayer=L.layerGroup().addTo(m);return true}
+function killLegacyCanvas(){const root=document.getElementById('liveMetroMap');if(!root)return;root.querySelectorAll('canvas.metro-train-canvas').forEach(c=>{c.style.setProperty('display','none','important');c.style.setProperty('visibility','hidden','important');c.style.setProperty('opacity','0','important');c.style.pointerEvents='none'})}
+function installStyle(){if(document.getElementById('mc22-network-overlay-style-v2222'))return;document.querySelectorAll('[id^="mc22-network-overlay-style"],#mc23-smooth-style').forEach(x=>x.remove());const s=document.createElement('style');s.id='mc22-network-overlay-style-v2222';s.textContent=`
 #liveMetroMap canvas.metro-train-canvas{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
-#liveMetroMap .train-marker,#liveMetroMap .metro-train,#liveMetroMap .vehicle-marker,#liveMetroMap .live-train,#liveMetroMap .train-dot{display:none!important}
-#liveMetroMap .mc22-vehicle-host{background:transparent!important;border:0!important;width:26px!important;height:16px!important;margin-left:-13px!important;margin-top:-8px!important;overflow:visible!important}
-#liveMetroMap .mc22-train{position:relative;width:22px;height:10px;box-sizing:border-box;border-radius:3px;background:#101923;border:1.4px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.28);transform:rotate(var(--angle,0deg));transform-origin:50% 50%;will-change:transform;display:flex;align-items:center;justify-content:center;gap:1.5px;pointer-events:auto}
-#liveMetroMap .mc22-train:before,#liveMetroMap .mc22-train:after{display:none!important}
-#liveMetroMap .mc22-train .win{width:4px;height:3px;border-radius:.8px;background:#dbe9f5;opacity:.9}
-#liveMetroMap .mc22-train .code{display:none!important}
-#liveMetroMap .mc22-train.projected{opacity:.72}
-#liveMetroMap .mc22-train.live{box-shadow:0 0 0 1px rgba(73,213,166,.18),0 1px 4px rgba(0,0,0,.28)}
-#liveMetroMap .mc22-train.at-station{filter:brightness(1.12)}
-`;document.head.appendChild(s);killLegacyCanvas()
-}
-
+#liveMetroMap .train-marker,#liveMetroMap .metro-train,#liveMetroMap .vehicle-marker,#liveMetroMap .live-train,#liveMetroMap .train-dot,#liveMetroMap .mc23-vehicle-host{display:none!important}
+#liveMetroMap .mc22-vehicle-host{background:transparent!important;border:0!important;width:34px!important;height:20px!important;margin-left:-17px!important;margin-top:-10px!important;overflow:visible!important}
+#liveMetroMap .mc22-train{position:relative;width:28px;height:12px;box-sizing:border-box;border-radius:3.5px;background:#111b26;border:1.6px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.30);transform:rotate(var(--angle,0deg));transform-origin:50% 50%;will-change:transform;display:flex;align-items:center;justify-content:center;gap:2px;pointer-events:auto;transition:background .16s ease,border-color .16s ease,box-shadow .16s ease,opacity .16s ease}
+#liveMetroMap .mc22-train .win{width:5px;height:3.5px;border-radius:1px;background:#dceaf5;opacity:.94}
+#liveMetroMap .mc22-train.at-station{background:#49d5a6!important;border-color:#fff!important;box-shadow:0 0 0 2px rgba(73,213,166,.28),0 1px 4px rgba(0,0,0,.30)!important}
+#liveMetroMap .mc22-train.at-station .win{background:#17322b!important}
+#liveMetroMap .mc22-train.approaching{background:#f2a93b!important;border-color:#fff!important}
+#liveMetroMap .mc22-train.projected{opacity:.76}
+#liveMetroMap .mc22-station-label-host{background:transparent!important;border:0!important;pointer-events:none!important}
+#liveMetroMap .mc22-station-label{display:inline-block;white-space:nowrap;color:#263b50;font:700 9px/1.1 system-ui;letter-spacing:-.01em;text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff,0 0 4px #fff;transform:translate(5px,-4px);opacity:.92}
+#liveMetroMap .mc22-station-label.focus{font-size:10px;font-weight:800;color:#10283f;opacity:1}
+`;document.head.appendChild(s);killLegacyCanvas()}
 function endpoint(m){return m==='metro'?BASE+'metro-vehicles-feed':BASE+'network-live-feed?mode='+encodeURIComponent(m)}
 function modeLabel(m){return ({metro:'Métro',rer:'RER',transilien:'Transilien',tram:'Tram',bus:'Bus'})[m]||m}
 function codeOf(v){return String(v.line_code??v.line_id??'?').replace(/IDFM:/i,'').replace(/BIS/i,'b')}
 function normColor(c){c=String(c||'').trim();if(!c)return'#60758a';return c.startsWith('#')?c:'#'+c}
-function textColor(l){return normColor(l?.text_color||'#ffffff')}
-function lineMap(data,m){
-  const out=new Map();
-  for(const l of data?.lines||[]){out.set(String(l.id),l);out.set(normLine(l.id),l);if(l.code)out.set(normLine(l.code),l);if(l.route_id)out.set(String(l.route_id),l)}
-  if(m==='metro'){
-    for(const [id,l] of metroLines)out.set(id,l);
-    for(const [k,c] of Object.entries(METRO_COLORS)){const id=normLine(k);if(!out.has(id))out.set(id,{id,code:id,color:c,text_color:'#fff'})}
-  }
-  return out
-}
+function lineMap(data,m){const out=new Map();for(const l of data?.lines||[]){out.set(String(l.id),l);out.set(normLine(l.id),l);if(l.code)out.set(normLine(l.code),l);if(l.route_id)out.set(String(l.route_id),l)}if(m==='metro'){for(const [id,l] of metroLines)out.set(id,l);for(const [id,c] of Object.entries(METRO_COLORS))if(!out.has(id))out.set(id,{id,code:id,color:c,text_color:'#fff'})}return out}
 function lineFor(lm,v){return lm.get(String(v.line_id))||lm.get(normLine(v.line_id))||lm.get(normLine(v.line_code))||lm.get(String(v.route_id??''))||null}
 function bearingAngle(aLat,aLon,bLat,bLon,old=0){const dlat=bLat-aLat,dlon=(bLon-aLon)*Math.cos(((aLat+bLat)/2)*Math.PI/180);if(Math.hypot(dlat,dlon)<1e-10)return old;return Math.atan2(-dlat,dlon)*180/Math.PI}
-function markerHtml(v,l,angle=0){const color=normColor(l?.color||METRO_COLORS[String(v.line_id).toUpperCase()]||'#60758a'),live=!v.simulation&&!v.stale_projection&&v.projection_kind!=='stale_simulated',station=v.status==='at_station';return `<div class="mc22-train ${live?'live':'projected'} ${station?'at-station':''}" style="--line:${color};--angle:${Number(angle).toFixed(1)}deg"><i class="win"></i><i class="win"></i><i class="win"></i></div>`}
-function title(v,m){const status=v.status==='at_station'?'À quai':v.status==='approaching'?'À l’approche':v.status==='holding'?'Retenu':'En route';return `${modeLabel(m)} ${esc(codeOf(v))} · ${esc(status)}${v.destination_name?' · vers '+esc(v.destination_name):''}`}
-
+function markerHtml(v,l,angle=0){const color=normColor(l?.color||METRO_COLORS[normLine(v.line_id)]||'#60758a'),live=!v.simulation&&!v.stale_projection&&v.projection_kind!=='stale_simulated';return `<div class="mc22-train ${live?'live':'projected'}" style="--line:${color};--angle:${Number(angle).toFixed(1)}deg"><i class="win"></i><i class="win"></i><i class="win"></i></div>`}
+function title(v,m){return `${modeLabel(m)} ${esc(codeOf(v))}${v.destination_name?' · vers '+esc(v.destination_name):''}`}
 function meters(a,b){const dy=(b.lat-a.lat)*111320,dx=(b.lon-a.lon)*111320*Math.cos(((a.lat+b.lat)/2)*Math.PI/180);return Math.hypot(dx,dy)}
-function geometryParts(shape){
-  const g=shape?.type==='Feature'?shape.geometry:shape;
-  if(!g?.coordinates)return[];
-  if(g.type==='LineString')return[g.coordinates];
-  if(g.type==='MultiLineString')return g.coordinates;
-  return[]
-}
-function addEdge(adj,a,b,w){
-  if(a===b||!Number.isFinite(w)||w<=0||w>5000)return;
-  const aa=adj[a]||(adj[a]=[]),bb=adj[b]||(adj[b]=[]);
-  if(!aa.some(e=>e[0]===b))aa.push([b,w]);
-  if(!bb.some(e=>e[0]===a))bb.push([a,w])
-}
-function buildGraph(lineId){
-  const id=normLine(lineId);if(metroGraphs.has(id))return metroGraphs.get(id);
-  const l=metroLines.get(id);if(!l)return null;
-  const nodes=[],adj=[],nodeByKey=new Map(),endpoints=new Set();
-  const nodeFor=(coord)=>{
-    const lon=Number(coord?.[0]),lat=Number(coord?.[1]);if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
-    const key=`${Math.round(lat*1e5)}:${Math.round(lon*1e5)}`;
-    let n=nodeByKey.get(key);
-    if(n==null){n=nodes.length;nodeByKey.set(key,n);nodes.push({lat,lon});adj.push([])}
-    return n
-  };
-  const shapes=(l.shape_variants||[]).map(v=>v?.shape).filter(Boolean);
-  if(!shapes.length&&l.shape)shapes.push(l.shape);
-  for(const shape of shapes){
-    for(const part of geometryParts(shape)){
-      let first=null,prev=null,last=null;
-      for(const coord of part){
-        const n=nodeFor(coord);if(n==null)continue;
-        if(first==null)first=n;
-        if(prev!=null&&prev!==n)addEdge(adj,prev,n,meters(nodes[prev],nodes[n]));
-        prev=n;last=n
-      }
-      if(first!=null)endpoints.add(first);if(last!=null)endpoints.add(last)
-    }
-  }
-  const ep=[...endpoints],cell=.00035,buckets=new Map();
-  const cellKey=(p)=>`${Math.floor(p.lat/cell)}:${Math.floor(p.lon/cell)}`;
-  for(const n of ep){const k=cellKey(nodes[n]),a=buckets.get(k)||[];a.push(n);buckets.set(k,a)}
-  for(const n of ep){
-    const p=nodes[n],cy=Math.floor(p.lat/cell),cx=Math.floor(p.lon/cell);
-    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-      for(const m of buckets.get(`${cy+dy}:${cx+dx}`)||[]){if(m<=n)continue;const w=meters(p,nodes[m]);if(w<=28)addEdge(adj,n,m,w)}
-    }
-  }
-  const segments=[];
-  for(let a=0;a<adj.length;a++)for(const e of adj[a])if(e[0]>a)segments.push([a,e[0]]);
-  const g={id,nodes,adj,segments};metroGraphs.set(id,g);return g
-}
+function geometryParts(shape){const g=shape?.type==='Feature'?shape.geometry:shape;if(!g?.coordinates)return[];if(g.type==='LineString')return[g.coordinates];if(g.type==='MultiLineString')return g.coordinates;return[]}
+function addEdge(adj,a,b,w){if(a===b||!Number.isFinite(w)||w<=0||w>5000)return;const aa=adj[a]||(adj[a]=[]),bb=adj[b]||(adj[b]=[]);if(!aa.some(e=>e[0]===b))aa.push([b,w]);if(!bb.some(e=>e[0]===a))bb.push([a,w])}
+function buildGraph(lineId){const id=normLine(lineId);if(metroGraphs.has(id))return metroGraphs.get(id);const l=metroLines.get(id);if(!l)return null;const nodes=[],adj=[],nodeByKey=new Map(),endpoints=new Set();const nodeFor=coord=>{const lon=Number(coord?.[0]),lat=Number(coord?.[1]);if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;const key=`${Math.round(lat*1e5)}:${Math.round(lon*1e5)}`;let n=nodeByKey.get(key);if(n==null){n=nodes.length;nodeByKey.set(key,n);nodes.push({lat,lon});adj.push([])}return n};const shapes=(l.shape_variants||[]).map(v=>v?.shape).filter(Boolean);if(!shapes.length&&l.shape)shapes.push(l.shape);for(const shape of shapes)for(const part of geometryParts(shape)){let first=null,prev=null,last=null;for(const coord of part){const n=nodeFor(coord);if(n==null)continue;if(first==null)first=n;if(prev!=null&&prev!==n)addEdge(adj,prev,n,meters(nodes[prev],nodes[n]));prev=n;last=n}if(first!=null)endpoints.add(first);if(last!=null)endpoints.add(last)}const ep=[...endpoints],cell=.00035,buckets=new Map(),cellKey=p=>`${Math.floor(p.lat/cell)}:${Math.floor(p.lon/cell)}`;for(const n of ep){const k=cellKey(nodes[n]),a=buckets.get(k)||[];a.push(n);buckets.set(k,a)}for(const n of ep){const p=nodes[n],cy=Math.floor(p.lat/cell),cx=Math.floor(p.lon/cell);for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)for(const m of buckets.get(`${cy+dy}:${cx+dx}`)||[]){if(m<=n)continue;const w=meters(p,nodes[m]);if(w<=28)addEdge(adj,n,m,w)}}const segments=[];for(let a=0;a<adj.length;a++)for(const e of adj[a])if(e[0]>a)segments.push([a,e[0]]);const g={id,nodes,adj,segments};metroGraphs.set(id,g);return g}
 function heapPush(h,item){let i=h.length;h.push(item);while(i){const p=(i-1)>>1;if(h[p][0]<=item[0])break;h[i]=h[p];i=p}h[i]=item}
 function heapPop(h){if(!h.length)return null;const root=h[0],last=h.pop();if(h.length&&last){let i=0;while(true){let a=i*2+1,b=a+1;if(a>=h.length)break;let c=b<h.length&&h[b][0]<h[a][0]?b:a;if(h[c][0]>=last[0])break;h[i]=h[c];i=c}h[i]=last}return root}
-function nearestNode(lineId,stationId,coord){
-  const id=normLine(lineId),key=`${id}|${stationId}`;if(nearestNodeCache.has(key))return nearestNodeCache.get(key);
-  const g=buildGraph(id);if(!g||!coord)return null;
-  let bi=-1,bd=Infinity;for(let i=0;i<g.nodes.length;i++){const d=meters(coord,g.nodes[i]);if(d<bd){bd=d;bi=i}}
-  const out=bi>=0?{node:bi,gap:bd}:null;nearestNodeCache.set(key,out);return out
-}
-function shortestNodePath(g,start,goal){
-  if(start===goal)return[start];
-  const n=g.nodes.length,dist=new Float64Array(n),prev=new Int32Array(n),seen=new Uint8Array(n);dist.fill(Infinity);prev.fill(-1);dist[start]=0;
-  const h=[];heapPush(h,[meters(g.nodes[start],g.nodes[goal]),0,start]);let guard=0;
-  while(h.length&&guard++<n*12){const x=heapPop(h);if(!x)break;const d=x[1],u=x[2];if(seen[u])continue;seen[u]=1;if(u===goal)break;for(const e of g.adj[u]){const v=e[0],nd=d+e[1];if(nd<dist[v]){dist[v]=nd;prev[v]=u;heapPush(h,[nd+meters(g.nodes[v],g.nodes[goal]),nd,v])}}}
-  if(prev[goal]===-1)return null;const out=[];for(let u=goal;u!==-1;u=prev[u]){out.push(u);if(u===start)break}out.reverse();return out[0]===start?out:null
-}
+function nearestNode(lineId,stationId,coord){const id=normLine(lineId),key=`${id}|${stationId}`;if(nearestNodeCache.has(key))return nearestNodeCache.get(key);const g=buildGraph(id);if(!g||!coord)return null;let bi=-1,bd=Infinity;for(let i=0;i<g.nodes.length;i++){const d=meters(coord,g.nodes[i]);if(d<bd){bd=d;bi=i}}const out=bi>=0?{node:bi,gap:bd}:null;nearestNodeCache.set(key,out);return out}
+function shortestNodePath(g,start,goal){if(start===goal)return[start];const n=g.nodes.length,dist=new Float64Array(n),prev=new Int32Array(n),seen=new Uint8Array(n);dist.fill(Infinity);prev.fill(-1);dist[start]=0;const h=[];heapPush(h,[meters(g.nodes[start],g.nodes[goal]),0,start]);let guard=0;while(h.length&&guard++<n*12){const x=heapPop(h);if(!x)break;const d=x[1],u=x[2];if(seen[u])continue;seen[u]=1;if(u===goal)break;for(const e of g.adj[u]){const v=e[0],nd=d+e[1];if(nd<dist[v]){dist[v]=nd;prev[v]=u;heapPush(h,[nd+meters(g.nodes[v],g.nodes[goal]),nd,v])}}}if(prev[goal]===-1)return null;const out=[];for(let u=goal;u!==-1;u=prev[u]){out.push(u);if(u===start)break}out.reverse();return out[0]===start?out:null}
 function makeTrackPath(nodes){if(!nodes||nodes.length<2)return null;const cum=[0];let total=0;for(let i=1;i<nodes.length;i++){total+=meters(nodes[i-1],nodes[i]);cum.push(total)}return total>0?{pts:nodes,cum,total}:null}
-function segmentPath(lineId,fromId,toId){
-  const lid=normLine(lineId),key=`${lid}|${fromId}|${toId}`;if(metroSegmentCache.has(key))return metroSegmentCache.get(key);
-  const revKey=`${lid}|${toId}|${fromId}`;if(metroSegmentCache.has(revKey)){const r=metroSegmentCache.get(revKey);if(r){const rr=makeTrackPath([...r.pts].reverse());metroSegmentCache.set(key,rr);return rr}}
-  const a=metroStations.get(String(fromId)),b=metroStations.get(String(toId)),g=buildGraph(lid);if(!a||!b||!g){metroSegmentCache.set(key,null);return null}
-  const na=nearestNode(lid,fromId,a),nb=nearestNode(lid,toId,b);if(!na||!nb||na.gap>260||nb.gap>260){metroSegmentCache.set(key,null);return null}
-  const ids=shortestNodePath(g,na.node,nb.node);if(!ids||ids.length<2){metroSegmentCache.set(key,null);return null}
-  const path=makeTrackPath(ids.map(i=>g.nodes[i]));metroSegmentCache.set(key,path);return path
-}
-function pointOnPath(path,p,oldAngle=0){
-  if(!path||!path.pts?.length)return null;p=Math.max(0,Math.min(1,p));const d=path.total*p,c=path.cum,pts=path.pts;
-  let lo=0,hi=c.length-1;while(lo+1<hi){const mid=(lo+hi)>>1;if(c[mid]<=d)lo=mid;else hi=mid}
-  const i=Math.min(lo,pts.length-2),a=pts[i],b=pts[i+1],span=Math.max(.001,c[i+1]-c[i]),q=Math.max(0,Math.min(1,(d-c[i])/span));
-  return[a.lat+(b.lat-a.lat)*q,a.lon+(b.lon-a.lon)*q,bearingAngle(a.lat,a.lon,b.lat,b.lon,oldAngle)]
-}
-function projectOnSegment(lat,lon,a,b){
-  const k=Math.cos(lat*Math.PI/180),ax=(a.lon-lon)*k,ay=a.lat-lat,bx=(b.lon-lon)*k,by=b.lat-lat,dx=bx-ax,dy=by-ay,d2=dx*dx+dy*dy;
-  let t=d2>1e-16?-(ax*dx+ay*dy)/d2:0;t=Math.max(0,Math.min(1,t));
-  const plat=a.lat+(b.lat-a.lat)*t,plon=a.lon+(b.lon-a.lon)*t,ex=(plon-lon)*k,ey=plat-lat;
-  return{lat:plat,lon:plon,d2:ex*ex+ey*ey}
-}
-function snapMetroToLine(lineId,lat,lon,oldAngle=0){
-  const g=buildGraph(lineId);if(!g||!g.segments?.length||!Number.isFinite(lat)||!Number.isFinite(lon))return null;
-  let best=null,bestA=null,bestB=null;
-  for(const [ia,ib] of g.segments){const a=g.nodes[ia],b=g.nodes[ib],p=projectOnSegment(lat,lon,a,b);if(!best||p.d2<best.d2){best=p;bestA=a;bestB=b}}
-  if(!best||!bestA||!bestB)return null;
-  return[best.lat,best.lon,bearingAngle(bestA.lat,bestA.lon,bestB.lat,bestB.lon,oldAngle)]
-}
-function metroSchedulePos(e,now){
-  const tl=e.timeline;
-  if(Array.isArray(tl)&&tl.length>=2&&metroStations.size){
-    for(let i=0;i<tl.length;i++){
-      const a=tl[i],arr=Date.parse(String(a.arrival_at??'')),dep=Date.parse(String(a.departure_at??a.arrival_at??''));
-      if(!Number.isFinite(arr)||!Number.isFinite(dep))continue;
-      if(now>=arr-2500&&now<=dep){
-        const n=tl[i+1];if(n){const path=segmentPath(e.lineId,String(a.station_id),String(n.station_id)),p=pointOnPath(path,0,e.angle);if(p)return p}
-        const s=metroStations.get(String(a.station_id));if(s){const x=snapMetroToLine(e.lineId,s.lat,s.lon,e.angle);return x||[s.lat,s.lon,e.angle]}
-      }
-      if(i<tl.length-1){
-        const b=tl[i+1],nextArr=Date.parse(String(b.arrival_at??''));if(!Number.isFinite(nextArr)||nextArr<=dep)continue;
-        if(now>dep&&now<nextArr){
-          const p=Math.max(0,Math.min(1,(now-dep)/(nextArr-dep))),path=segmentPath(e.lineId,String(a.station_id),String(b.station_id)),x=pointOnPath(path,p,e.angle);if(x)return x;
-          const ca=metroStations.get(String(a.station_id)),cb=metroStations.get(String(b.station_id));if(ca&&cb){const rawLat=ca.lat+(cb.lat-ca.lat)*p,rawLon=ca.lon+(cb.lon-ca.lon)*p,snap=snapMetroToLine(e.lineId,rawLat,rawLon,e.angle);if(snap)return snap}
-        }
-      }
-    }
-  }
-  const v=e.vehicle||{},from=String(v.from_station_id??''),to=String(v.to_station_id??''),progress=Number(v.progress);
-  if(from&&to&&Number.isFinite(progress)){
-    const path=segmentPath(e.lineId,from,to),x=pointOnPath(path,progress,e.angle);if(x)return x;
-    const a=metroStations.get(from),b=metroStations.get(to);if(a&&b){const p=Math.max(0,Math.min(1,progress)),rawLat=a.lat+(b.lat-a.lat)*p,rawLon=a.lon+(b.lon-a.lon)*p,snap=snapMetroToLine(e.lineId,rawLat,rawLon,e.angle);if(snap)return snap}
-  }
-  if(from){const a=metroStations.get(from);if(a){const snap=snapMetroToLine(e.lineId,a.lat,a.lon,e.angle);return snap||[a.lat,a.lon,e.angle]}}
-  return null
-}
-function sampleTarget(e,t){if(!e.duration||t>=e.start+e.duration)return[e.targetLat,e.targetLon,e.angle];const p=Math.max(0,Math.min(1,(t-e.start)/e.duration)),q=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;return[e.fromLat+(e.targetLat-e.fromLat)*q,e.fromLon+(e.targetLon-e.fromLon)*q,bearingAngle(e.fromLat,e.fromLon,e.targetLat,e.targetLon,e.angle)]}
-function stationMap(data){const out=new Map();for(const s of data?.stations||[]){const lat=Number(s.lat??s.latitude),lon=Number(s.lon??s.longitude);if(Number.isFinite(lat)&&Number.isFinite(lon))out.set(String(s.id),{lat,lon})}return out}
-function schedulePos(e,now){
-  const tl=e.timeline,sm=e.stationMap;if(!Array.isArray(tl)||tl.length<2||!sm?.size)return null;
-  for(let i=0;i<tl.length;i++){
-    const a=tl[i],ca=sm.get(String(a.station_id));if(!ca)continue;const arr=Date.parse(String(a.arrival_at??'')),dep=Date.parse(String(a.departure_at??a.arrival_at??''));
-    if(Number.isFinite(arr)&&Number.isFinite(dep)&&now>=arr-2500&&now<=dep){const n=tl[i+1],cn=n?sm.get(String(n.station_id)):null,ang=cn?bearingAngle(ca.lat,ca.lon,cn.lat,cn.lon,e.angle):e.angle;return[ca.lat,ca.lon,ang]}
-    if(i<tl.length-1){const b=tl[i+1],cb=sm.get(String(b.station_id)),nextArr=Date.parse(String(b.arrival_at??''));if(!cb||!Number.isFinite(dep)||!Number.isFinite(nextArr)||nextArr<=dep)continue;if(now>dep&&now<nextArr){const p=Math.max(0,Math.min(1,(now-dep)/(nextArr-dep)));return[ca.lat+(cb.lat-ca.lat)*p,ca.lon+(cb.lon-ca.lon)*p,bearingAngle(ca.lat,ca.lon,cb.lat,cb.lon,e.angle)]}}
-  }
-  return null
-}
-function setTrainAngle(e,angle){if(!Number.isFinite(angle)||Math.abs(angle-e.angle)<.35)return;e.angle=angle;const el=e.mk.getElement()?.querySelector?.('.mc22-train');if(el)el.style.setProperty('--angle',`${angle.toFixed(1)}deg`)}
-function upsert(v,l,m,sm){
-  const id=m+':'+String(v.vehicle_id),lat=Number(v.latitude),lon=Number(v.longitude),now=performance.now(),lineId=normLine(v.line_id??v.line_code);let e=markers.get(id);
-  if(!e){let start=[lat,lon,0];if(m==='metro'){const snap=snapMetroToLine(lineId,lat,lon,0);if(snap)start=snap}const icon=L.divIcon({className:'mc22-vehicle-host',html:markerHtml(v,l,start[2]),iconSize:[26,16],iconAnchor:[13,8]});const mk=L.marker([start[0],start[1]],{icon,keyboard:false,zIndexOffset:1500,interactive:true});mk.bindTooltip(title(v,m),{direction:'top',offset:[0,-8]});mk.addTo(layer);e={mk,mode:m,lineId,fromLat:start[0],fromLon:start[1],targetLat:start[0],targetLon:start[1],currentLat:start[0],currentLon:start[1],start:now,duration:0,angle:start[2],vehicle:v,line:l,timeline:v.movement_timeline||[],stationMap:sm,seen:true};markers.set(id,e)}
-  else{let target=[lat,lon,e.angle];if(m==='metro'){const snap=snapMetroToLine(lineId,lat,lon,e.angle);if(snap)target=snap}const cur=sampleTarget(e,now),angle=target[2]??bearingAngle(cur[0],cur[1],target[0],target[1],e.angle);e.currentLat=cur[0];e.currentLon=cur[1];e.fromLat=cur[0];e.fromLon=cur[1];e.targetLat=target[0];e.targetLon=target[1];e.start=now;e.duration=(Math.abs(target[0]-cur[0])+Math.abs(target[1]-cur[1])<1e-9)?0:MOVE_MS;e.angle=angle;e.mode=m;e.lineId=lineId;e.vehicle=v;e.line=l;e.timeline=v.movement_timeline||[];e.stationMap=sm;e.mk.setIcon(L.divIcon({className:'mc22-vehicle-host',html:markerHtml(v,l,angle),iconSize:[26,16],iconAnchor:[13,8]}));if(e.mk.getTooltip())e.mk.setTooltipContent(title(v,m));e.seen=true}
-}
-function animate(t){
-  if(t-lastFrame<FRAME_MS){raf=requestAnimationFrame(animate);return}lastFrame=t;const epoch=Date.now();
-  for(const e of markers.values()){
-    const sched=e.mode==='metro'?metroSchedulePos(e,epoch):schedulePos(e,epoch);let p=sched||sampleTarget(e,t);
-    if(e.mode==='metro'){const snap=snapMetroToLine(e.lineId,p[0],p[1],p[2]);if(snap)p=snap}
-    e.currentLat=p[0];e.currentLon=p[1];e.mk.setLatLng([p[0],p[1]]);setTrainAngle(e,p[2])
-  }
-  raf=requestAnimationFrame(animate)
-}
+function segmentPath(lineId,fromId,toId){const lid=normLine(lineId),key=`${lid}|${fromId}|${toId}`;if(metroSegmentCache.has(key))return metroSegmentCache.get(key);const rev=`${lid}|${toId}|${fromId}`;if(metroSegmentCache.has(rev)){const r=metroSegmentCache.get(rev);if(r){const rr=makeTrackPath([...r.pts].reverse());metroSegmentCache.set(key,rr);return rr}}const a=metroStations.get(String(fromId)),b=metroStations.get(String(toId)),g=buildGraph(lid);if(!a||!b||!g){metroSegmentCache.set(key,null);return null}const na=nearestNode(lid,fromId,a),nb=nearestNode(lid,toId,b);if(!na||!nb||na.gap>260||nb.gap>260){metroSegmentCache.set(key,null);return null}const ids=shortestNodePath(g,na.node,nb.node);if(!ids||ids.length<2){metroSegmentCache.set(key,null);return null}const path=makeTrackPath(ids.map(i=>g.nodes[i]));metroSegmentCache.set(key,path);return path}
+function pointOnPath(path,p,oldAngle=0){if(!path||!path.pts?.length)return null;p=Math.max(0,Math.min(1,p));const d=path.total*p,c=path.cum,pts=path.pts;let lo=0,hi=c.length-1;while(lo+1<hi){const mid=(lo+hi)>>1;if(c[mid]<=d)lo=mid;else hi=mid}const i=Math.min(lo,pts.length-2),a=pts[i],b=pts[i+1],span=Math.max(.001,c[i+1]-c[i]),q=Math.max(0,Math.min(1,(d-c[i])/span));return[a.lat+(b.lat-a.lat)*q,a.lon+(b.lon-a.lon)*q,bearingAngle(a.lat,a.lon,b.lat,b.lon,oldAngle)]}
+function projectOnSegment(lat,lon,a,b){const k=Math.cos(lat*Math.PI/180),ax=(a.lon-lon)*k,ay=a.lat-lat,bx=(b.lon-lon)*k,by=b.lat-lat,dx=bx-ax,dy=by-ay,d2=dx*dx+dy*dy;let t=d2>1e-16?-(ax*dx+ay*dy)/d2:0;t=Math.max(0,Math.min(1,t));const plat=a.lat+(b.lat-a.lat)*t,plon=a.lon+(b.lon-a.lon)*t,ex=(plon-lon)*k,ey=plat-lat;return{lat:plat,lon:plon,d2:ex*ex+ey*ey}}
+function snapMetroToLine(lineId,lat,lon,oldAngle=0){const g=buildGraph(lineId);if(!g||!g.segments?.length)return null;let best=null,ba=null,bb=null;for(const [ia,ib] of g.segments){const a=g.nodes[ia],b=g.nodes[ib],p=projectOnSegment(lat,lon,a,b);if(!best||p.d2<best.d2){best=p;ba=a;bb=b}}if(!best)return null;return[best.lat,best.lon,bearingAngle(ba.lat,ba.lon,bb.lat,bb.lon,oldAngle),Math.sqrt(best.d2)*111320]}
+function stationMap(data){const out=new Map();for(const s of data?.stations||[]){const lat=Number(s.lat??s.latitude),lon=Number(s.lon??s.longitude);if(Number.isFinite(lat)&&Number.isFinite(lon))out.set(String(s.id),{lat,lon,name:String(s.name??s.id)})}return out}
+function easeTravel(p){p=Math.max(0,Math.min(1,p));return p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2}
+function metroDesired(e,now){const v=e.vehicle||{},dwell=Date.parse(String(v.dwell_until??''));if(v.status==='at_station'&&Number.isFinite(dwell)&&now<=dwell+1500){const s=metroStations.get(String(v.from_station_id??v.to_station_id??''));if(s){const x=snapMetroToLine(e.lineId,s.lat,s.lon,e.angle);if(x)return{p:x,state:'at_station'}}}const tl=e.timeline;if(Array.isArray(tl)&&tl.length){for(let i=0;i<tl.length;i++){const a=tl[i],arr=Date.parse(String(a.arrival_at??'')),dep=Date.parse(String(a.departure_at??a.arrival_at??''));if(!Number.isFinite(arr)||!Number.isFinite(dep))continue;const sa=metroStations.get(String(a.station_id));if(sa&&now>=arr&&now<=dep){const x=snapMetroToLine(e.lineId,sa.lat,sa.lon,e.angle);if(x)return{p:x,state:'at_station'}}if(i<tl.length-1){const b=tl[i+1],nextArr=Date.parse(String(b.arrival_at??''));if(!Number.isFinite(nextArr)||nextArr<=dep)continue;if(now>dep&&now<nextArr){const raw=(now-dep)/(nextArr-dep),pp=easeTravel(raw),path=segmentPath(e.lineId,String(a.station_id),String(b.station_id)),x=pointOnPath(path,pp,e.angle);if(x)return{p:x,state:(nextArr-now<18000?'approaching':'moving')}}}}}const from=String(v.from_station_id??''),to=String(v.to_station_id??''),progress=Number(v.progress);if(from&&to&&Number.isFinite(progress)){const path=segmentPath(e.lineId,from,to),x=pointOnPath(path,easeTravel(progress),e.angle);if(x)return{p:x,state:v.status==='approaching'?'approaching':'moving'}}const snap=snapMetroToLine(e.lineId,Number(v.latitude),Number(v.longitude),e.angle);return snap?{p:snap,state:v.status==='at_station'?'at_station':v.status==='approaching'?'approaching':'moving'}:null}
+function networkDesired(e,now){const tl=e.timeline,sm=e.stationMap;if(Array.isArray(tl)&&tl.length>=2&&sm?.size){for(let i=0;i<tl.length;i++){const a=tl[i],ca=sm.get(String(a.station_id));if(!ca)continue;const arr=Date.parse(String(a.arrival_at??'')),dep=Date.parse(String(a.departure_at??a.arrival_at??''));if(Number.isFinite(arr)&&Number.isFinite(dep)&&now>=arr&&now<=dep)return{p:[ca.lat,ca.lon,e.angle],state:'at_station'};if(i<tl.length-1){const b=tl[i+1],cb=sm.get(String(b.station_id)),nextArr=Date.parse(String(b.arrival_at??''));if(cb&&Number.isFinite(dep)&&Number.isFinite(nextArr)&&now>dep&&now<nextArr){const q=easeTravel((now-dep)/(nextArr-dep));return{p:[ca.lat+(cb.lat-ca.lat)*q,ca.lon+(cb.lon-ca.lon)*q,bearingAngle(ca.lat,ca.lon,cb.lat,cb.lon,e.angle)],state:nextArr-now<18000?'approaching':'moving'}}}}}return{p:[Number(e.vehicle.latitude),Number(e.vehicle.longitude),e.angle],state:e.vehicle.status==='at_station'?'at_station':e.vehicle.status==='approaching'?'approaching':'moving'}}
+function setAngle(e,a){if(!Number.isFinite(a)||Math.abs(a-e.angle)<.3)return;e.angle=a;const el=e.mk.getElement()?.querySelector('.mc22-train');if(el)el.style.setProperty('--angle',`${a.toFixed(1)}deg`)}
+function setVisual(e,state){if(e.visualState===state)return;e.visualState=state;const el=e.mk.getElement()?.querySelector('.mc22-train');if(!el)return;el.classList.toggle('at-station',state==='at_station');el.classList.toggle('approaching',state==='approaching')}
+function upsert(v,l,m,sm){const id=m+':'+String(v.vehicle_id),lineId=normLine(v.line_id??v.line_code);let e=markers.get(id);if(!e){let lat=Number(v.latitude),lon=Number(v.longitude),ang=0;if(m==='metro'){const s=snapMetroToLine(lineId,lat,lon,0);if(s){lat=s[0];lon=s[1];ang=s[2]}}const icon=L.divIcon({className:'mc22-vehicle-host',html:markerHtml(v,l,ang),iconSize:[34,20],iconAnchor:[17,10]});const mk=L.marker([lat,lon],{icon,keyboard:false,zIndexOffset:1500,interactive:true}).addTo(layer);mk.bindTooltip(title(v,m),{direction:'top',offset:[0,-9]});e={mk,mode:m,lineId,currentLat:lat,currentLon:lon,angle:ang,vehicle:v,line:l,timeline:v.movement_timeline||[],stationMap:sm,visualState:null,seen:true};markers.set(id,e)}else{e.mode=m;e.lineId=lineId;e.vehicle=v;e.line=l;e.timeline=v.movement_timeline||[];e.stationMap=sm;e.seen=true;if(e.mk.getTooltip())e.mk.setTooltipContent(title(v,m))}}
+function currentSelectionInfo(){const s=selected(),n=new Set([...s].map(normLine));return{raw:s,norm:n,all:!s.size||s.size>=16}}
+function allowedEntry(e,info){if(info.all)return true;return info.raw.has(e.lineId)||info.norm.has(e.lineId)||info.raw.has(String(e.vehicle?.line_id??''))||info.raw.has(String(e.vehicle?.line_code??''))}
+function pruneToSelection(){const info=currentSelectionInfo();for(const [id,e] of markers){if(e.mode==='metro'&&!allowedEntry(e,info)){layer.removeLayer(e.mk);markers.delete(id)}}updateStationLabels()}
 function sweep(){for(const [id,e] of markers){if(e.seen){e.seen=false;continue}layer.removeLayer(e.mk);markers.delete(id)}}
-async function loadMetroGeometry(force=false){
-  if(!force&&metroLines.size&&Date.now()-metroGeometryAt<6*60*60_000)return true;if(metroGeometryPromise)return metroGeometryPromise;
-  metroGeometryPromise=(async()=>{const r=await fetch(BASE+'metro-geometry-feed',{cache:'default'}),d=await r.json();if(!r.ok||!d?.ok)throw new Error(d?.error||`geometry ${r.status}`);metroLines=new Map((d.lines||[]).map(l=>[normLine(l.id),l]));metroStations=stationMap(d);metroGeometryAt=Date.now();metroGraphs.clear();metroSegmentCache.clear();nearestNodeCache.clear();return true})().catch(e=>{console.debug('MetroChain metro geometry',e);return false}).finally(()=>{metroGeometryPromise=null});return metroGeometryPromise
-}
-async function refresh(){
-  if(busy||document.hidden)return;killLegacyCanvas();const m=mode(),mp=map(),ly=ensureLayer();if(!mp||!ly)return;if(lastMode!==m){clearMarkers();lastMode=m}busy=true;
-  try{
-    if(m==='metro')await loadMetroGeometry();
-    const r=await fetch(endpoint(m),{cache:'no-store'}),d=await r.json();if(!r.ok||!d?.ok)return;
-    const lm=lineMap(d,m),sm=m==='metro'?metroStations:stationMap(d);if(sm.size)currentStations=sm;
-    const sel=selected(),selNorm=new Set([...sel].map(normLine)),all=!sel.size||(d.lines&&sel.size>=d.lines.length)||(m==='metro'&&sel.size>=16);
-    const rows=(d.vehicles||[]).filter(v=>{if(all)return true;const l=lineFor(lm,v),ids=[String(v.line_id??''),String(v.line_code??''),String(v.route_id??'')];if(l)ids.push(String(l.id??''),String(l.route_id??''));return ids.some(x=>x&&(sel.has(x)||selNorm.has(normLine(x))))}).filter(v=>Number.isFinite(Number(v.latitude))&&Number.isFinite(Number(v.longitude))).filter(v=>v.service_state!=='upcoming'&&v.status!=='queued');
-    for(const v of rows)upsert(v,lineFor(lm,v),m,currentStations);sweep();
-    const el=document.getElementById('liveUpdatedAt');if(el)el.textContent=`${rows.length} ${modeLabel(m)} en circulation · ${m==='metro'?'snap permanent sur le tracé IDFM':'animation continue'} · ${d.degraded?'projection de secours':'PRIM / IDFM'}`
-  }catch(e){console.debug('MetroChain hard-snap overlay',e)}finally{busy=false}
-}
-function start(tries=0){if(tries>220)return;installStyle();if(!map()||typeof L==='undefined'){setTimeout(()=>start(tries+1),75);return}ensureLayer();loadMetroGeometry().finally(refresh);timer=setInterval(refresh,REFRESH_MS);if(!raf)raf=requestAnimationFrame(animate);document.addEventListener('click',e=>{if(e.target?.closest?.('.mc22-mode-btn'))setTimeout(refresh,80)});const root=document.getElementById('liveMetroMap');if(root)new MutationObserver(killLegacyCanvas).observe(root,{childList:true,subtree:true})}
+function animate(t){if(t-lastFrame<FRAME_MS){raf=requestAnimationFrame(animate);return}const dt=Math.min(.12,Math.max(.016,(t-lastFrame)/1000||.032));lastFrame=t;const epoch=Date.now();for(const e of markers.values()){const d=e.mode==='metro'?metroDesired(e,epoch):networkDesired(e,epoch);if(!d?.p)continue;const target=d.p,cur={lat:e.currentLat,lon:e.currentLon},tar={lat:target[0],lon:target[1]},dist=meters(cur,tar);if(dist>0.15){const tau=d.state==='at_station'?.18:.48,alpha=1-Math.exp(-dt/tau),maxStep=(d.state==='at_station'?38:30)*dt,step=Math.min(dist,Math.max(dist*alpha,maxStep*.35),maxStep),q=Math.min(1,step/dist);let lat=e.currentLat+(target[0]-e.currentLat)*q,lon=e.currentLon+(target[1]-e.currentLon)*q,ang=target[2];if(e.mode==='metro'){const snap=snapMetroToLine(e.lineId,lat,lon,e.angle);if(snap){lat=snap[0];lon=snap[1];ang=snap[2]}}e.currentLat=lat;e.currentLon=lon;e.mk.setLatLng([lat,lon]);setAngle(e,ang)}else setAngle(e,target[2]);setVisual(e,d.state)}raf=requestAnimationFrame(animate)}
+function uniqueStations(){const byName=new Map();for(const s of metroStations.values()){const key=s.name.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase();const x=byName.get(key);if(!x)byName.set(key,{name:s.name,lat:s.lat,lon:s.lon,count:1});else{x.lat=(x.lat*x.count+s.lat)/(x.count+1);x.lon=(x.lon*x.count+s.lon)/(x.count+1);x.count++}}return[...byName.values()]}
+function stationOnLine(s,lineId){const snap=snapMetroToLine(lineId,s.lat,s.lon,0);return snap&&snap[3]<=105}
+function updateStationLabels(){if(!labelLayer||mode()!=='metro'){labelLayer?.clearLayers();return}const m=map();if(!m)return;labelLayer.clearLayers();const z=m.getZoom(),bounds=m.getBounds(),info=currentSelectionInfo(),one=!info.all&&info.norm.size===1?[...info.norm][0]:null;if(!one&&z<11.8)return;let rows=uniqueStations().filter(s=>bounds.pad(.12).contains([s.lat,s.lon]));if(one)rows=rows.filter(s=>stationOnLine(s,one));else if(z<12.7)rows=rows.filter(s=>MAJOR_RE.test(s.name));const max=one?70:(z>=13.3?80:z>=12.7?55:28);rows=rows.slice(0,max);for(const s of rows){const focus=one?' focus':'';const icon=L.divIcon({className:'mc22-station-label-host',html:`<span class="mc22-station-label${focus}">${esc(s.name)}</span>`,iconSize:[1,1],iconAnchor:[0,0]});L.marker([s.lat,s.lon],{icon,interactive:false,keyboard:false,zIndexOffset:350}).addTo(labelLayer)}}
+async function loadMetroGeometry(force=false){if(!force&&metroLines.size&&Date.now()-metroGeometryAt<6*60*60_000)return true;if(metroGeometryPromise)return metroGeometryPromise;metroGeometryPromise=(async()=>{const r=await fetch(BASE+'metro-geometry-feed',{cache:'default'}),d=await r.json();if(!r.ok||!d?.ok)throw new Error(d?.error||`geometry ${r.status}`);metroLines=new Map((d.lines||[]).map(l=>[normLine(l.id),l]));metroStations=stationMap(d);metroGeometryAt=Date.now();metroGraphs.clear();metroSegmentCache.clear();nearestNodeCache.clear();updateStationLabels();return true})().catch(e=>{console.debug('MetroChain geometry',e);return false}).finally(()=>metroGeometryPromise=null);return metroGeometryPromise}
+async function refresh(){if(busy||document.hidden)return;killLegacyCanvas();if(!ensureLayers())return;const m=mode();if(lastMode!==m){for(const e of markers.values())layer.removeLayer(e.mk);markers.clear();labelLayer.clearLayers();lastMode=m}busy=true;try{if(m==='metro')await loadMetroGeometry();const r=await fetch(endpoint(m),{cache:'no-store'}),d=await r.json();if(!r.ok||!d?.ok)return;const lm=lineMap(d,m),sm=m==='metro'?metroStations:stationMap(d),info=currentSelectionInfo();const rows=(d.vehicles||[]).filter(v=>Number.isFinite(Number(v.latitude))&&Number.isFinite(Number(v.longitude))).filter(v=>v.service_state!=='upcoming'&&v.status!=='queued').filter(v=>{if(m!=='metro'||info.all)return true;const lid=normLine(v.line_id??v.line_code);return info.norm.has(lid)||info.raw.has(String(v.line_id??''))});for(const e of markers.values())e.seen=false;for(const v of rows)upsert(v,lineFor(lm,v),m,sm);sweep();updateStationLabels();const el=document.getElementById('liveUpdatedAt');if(el)el.textContent=`${rows.length} ${modeLabel(m)} · ${m==='metro'?'arrêts + tracé IDFM + animation fluide':'animation continue'} · ${d.degraded?'projection':'PRIM / IDFM'}`}catch(e){console.debug('MetroChain v22.22',e)}finally{busy=false}}
+function scheduleFilterSync(){setTimeout(pruneToSelection,0);setTimeout(pruneToSelection,60);setTimeout(refresh,90)}
+function start(tries=0){if(tries>220)return;installStyle();if(!ensureLayers()){setTimeout(()=>start(tries+1),75);return}loadMetroGeometry().finally(refresh);timer=setInterval(refresh,REFRESH_MS);if(!raf)raf=requestAnimationFrame(animate);document.addEventListener('click',e=>{if(e.target?.closest?.('#liveMap,.live-map,.mc22-mode-btn'))scheduleFilterSync()},true);document.addEventListener('change',scheduleFilterSync,true);const m=map();m.on('zoomend moveend',updateStationLabels);const root=document.getElementById('liveMetroMap');if(root)new MutationObserver(killLegacyCanvas).observe(root,{childList:true,subtree:true})}
 start();
 })();
