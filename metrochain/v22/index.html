@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="dark">
-  <title>MétroChain v24.2 · Motion restored</title>
+  <title>MétroChain v25 · Shared motion</title>
   <style>
     html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b12}
     #appFrame{display:block;width:100%;height:100%;border:0;background:#050b12}
@@ -17,13 +17,12 @@
 </head>
 <body>
   <div id="boot"><span><i></i>Connexion au réseau francilien…</span></div>
-  <iframe id="appFrame" title="MétroChain" src="../v2/index.html?v=20260826-v24-2-motion"></iframe>
+  <iframe id="appFrame" title="MétroChain" src="../v2/index.html?v=20260826-v25-shared-motion"></iframe>
   <script>
   (()=>{
     const f=document.getElementById('appFrame'),boot=document.getElementById('boot');
     const add=(d,tag,id,src)=>{if(d.getElementById(id))return;const n=d.createElement(tag);n.id=id;if(tag==='link'){n.rel='stylesheet';n.href=src;d.head.appendChild(n)}else{n.src=src;n.async=false;d.body.appendChild(n)}};
     const apply=()=>{try{const d=f.contentDocument;if(!d||!d.querySelector('.app'))return false;
-      add(d,'script','mc-network-refresh-throttle','../v22/network-refresh-throttle.js?v=20260826-v1');
       add(d,'link','mc18-theme','../v18/theme.css?v=20260823d');
       add(d,'link','mc18-theme-refine','../v18/theme-refine.css?v=20260823d');
       add(d,'link','mc18-theme-final','../v18/theme-final.css?v=20260823d');
@@ -39,11 +38,10 @@
       add(d,'script','mc226-render-perf','../v22/render-perf.js?v=20260823v22-8');
       add(d,'script','mc223-motion-status','../v22/motion-status.js?v=20260823v22-8');
       add(d,'script','mc225-fast-ui','../v22/fast-ui.js?v=20260823v22-8');
-      add(d,'script','mc24-network-overlay','../v22/metro-live-overlay-v24.js?v=20260826-v24-2-motion');
-      add(d,'script','mc22-legacy-kill','../v22/legacy-train-kill.js?v=20260824v22-15');
+      add(d,'script','mc25-motion-bridge','../v22/motion-bridge-v25.js?v=20260826-v25-shared-motion');
       add(d,'link','mc22-journey-fix','../v22/journey-fix.css?v=20260824v22-11');
       add(d,'script','mc22-quota-panel-v12','../v22/quota-panel-v12.js?v=20260824v22-12');
-      boot.classList.add('hide');return true}catch(e){console.error('MetroChain v24.2 shell',e);return false}};
+      boot.classList.add('hide');return true}catch(e){console.error('MetroChain v25 shell',e);return false}};
     f.addEventListener('load',()=>{let n=0;const t=setInterval(()=>{if(apply()||++n>180)clearInterval(t)},100)})
   })();
   </script>
